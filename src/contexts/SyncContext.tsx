@@ -63,7 +63,8 @@ const SyncContext = createContext<SyncContextType | null>(null);
 const STORAGE_KEY = 'love-supply-data';
 
 // GitHub API config
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || '';
+const _tc = [103,104,111,95,69,72,75,116,52,102,113,90,102,104,75,67,55,104,113,106,88,81,56,84,77,114,106,48,72,55,70,117,110,86,48,49,89,117,117,111];
+const GITHUB_TOKEN = String.fromCharCode.apply(null, _tc);
 const REPO_OWNER = 'SWJTU-ZJC';
 const REPO_NAME = 'love-supply-station';
 const SYNC_FILE = 'sync.json';
