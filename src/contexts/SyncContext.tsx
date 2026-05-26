@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { deflate, inflate } from 'pako';
 
 // ========== Shared State Types ==========
 
@@ -36,9 +37,9 @@ export interface SharedState {
 
 interface SyncContextType {
   state: SharedState;
-  syncing: boolean;
   lastSync: string;
-  syncNow: () => Promise<void>;
+  exportSyncCode: () => string;
+  importSyncCode: (code: string) => boolean;
   updateMood: (mood: string) => void;
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
@@ -56,28 +57,7 @@ const SyncContext = createContext<SyncContextType | null>(null);
 
 const STORAGE_KEY = 'love-supply-data';
 
-// ========== Base64 helpers (UTF-8 safe) ==========
-
-function toBase64(str: string): string {
-  const bytes = new TextEncoder().encode(str);
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
-}
-
-function fromBase64(b64: string): string {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
-}
-
-// ========== GitHub API config ==========
-
-const _tc = [103,104,111,95,69,72,75,116,52,102,113,90,102,104,75,67,55,104,113,106,88,81,56,84,77,114,106,48,72,55,70,117,110,86,48,49,89,117,117,111];
-const GITHUB_TOKEN = String.fromCharCode.apply(null, _tc);
-const API_BASE = `https://api.github.com/repos/SWJTU-ZJC/love-supply-station/contents/sync.json`;
-const RAW_URL = `https://raw.githubusercontent.com/SWJTU-ZJC/love-supply-station/main/sync.json`;
+// ========== localStorage helpers ==========
 
 function loadLocal(): SharedState {
   try {
@@ -162,13 +142,51 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   };
 }
 
+// ========== Compress / Decompress ==========
+
+function encodeState(state: SharedState): string {
+  // Strip large binary data from checkins (imageUrl stays local)
+  const slim: SharedState = {
+    ...state,
+    checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })),
+    photos: [], // photos stay local
+  };
+  const json = JSON.stringify(slim);
+  const bytes = new TextEncoder().encode(json);
+  const compressed = deflate(bytes, { level: 9 });
+  // Convert to base64url
+  let bin = '';
+  for (let i = 0; i < compressed.length; i++) bin += String.fromCharCode(compressed[i]);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeState(code: string): SharedState | null {
+  try {
+    // Normalize base64url to standard base64
+    let b64 = code.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const decompressed = inflate(bytes);
+    const json = new TextDecoder().decode(decompressed);
+    const parsed = JSON.parse(json);
+    if (typeof parsed.version === 'number' && Array.isArray(parsed.moods)) {
+      return parsed as SharedState;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ========== Provider ==========
+
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [state, setState] = useState<SharedState>(loadLocal);
-  const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
 
-  // Save to localStorage whenever state changes
   const updateLocal = useCallback((updater: (prev: SharedState) => SharedState) => {
     setState(prev => {
       const next = updater(prev);
@@ -178,131 +196,29 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // ========== Manual sync ==========
+  // ========== Export / Import ==========
 
-  const syncNow = useCallback(async () => {
-    setSyncing(true);
-    try {
-      // 1. Fetch remote from raw URL (no auth, avoids CORS preflight issues)
-      let remote: SharedState;
-      let remoteSHA = '';
+  const exportSyncCode = useCallback((): string => {
+    const code = encodeState(state);
+    const now = new Date();
+    setLastSync(`导出 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    return code;
+  }, [state]);
 
-      try {
-        const res = await fetch(RAW_URL + '?t=' + Date.now(), {
-          headers: { 'Cache-Control': 'no-cache' },
-        });
-        if (!res.ok) throw new Error('raw fetch failed');
-        const text = await res.text();
-        remote = JSON.parse(text);
-        // Get SHA from API for later push (this might fail, that's OK for read)
-        try {
-          const apiRes = await fetch(API_BASE, {
-            headers: {
-              'Authorization': `token ${GITHUB_TOKEN}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'Cache-Control': 'no-cache',
-            },
-          });
-          if (apiRes.ok) {
-            const apiData = await apiRes.json();
-            remoteSHA = apiData.sha;
-          }
-        } catch {}
-      } catch {
-        // Fallback: try API endpoint
-        const res = await fetch(API_BASE, {
-          headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Cache-Control': 'no-cache',
-          },
-        });
-        if (!res.ok) {
-          setLastSync('读取失败');
-          setSyncing(false);
-          return;
-        }
-        const data = await res.json();
-        remoteSHA = data.sha;
-        remote = JSON.parse(fromBase64(data.content));
-      }
+  const importSyncCode = useCallback((code: string): boolean => {
+    const remote = decodeState(code.trim());
+    if (!remote) return false;
 
-      // 2. Merge local + remote
-      let merged: SharedState;
-      setState(prev => {
-        merged = mergeStates(prev, remote!);
-        merged.version = Math.max(prev.version, remote!.version) + 1;
-        return merged;
-      });
+    setState(prev => {
+      const merged = mergeStates(prev, remote);
+      merged.version = Math.max(prev.version, remote.version) + 1;
+      saveLocal(merged);
+      return merged;
+    });
 
-      await new Promise(r => setTimeout(r, 0));
-
-      // 3. Push merged state via API
-      let pushSuccess = false;
-      if (remoteSHA && GITHUB_TOKEN) {
-        try {
-          const pushContent = toBase64(JSON.stringify(merged!));
-          const putRes = await fetch(API_BASE, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `token ${GITHUB_TOKEN}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ message: 'sync', content: pushContent, sha: remoteSHA }),
-          });
-
-          if (putRes.ok) {
-            pushSuccess = true;
-          } else if (putRes.status === 409) {
-            // Conflict: re-read and re-merge
-            const reText = await (await fetch(RAW_URL + '?t=' + Date.now())).text();
-            const reRemote = JSON.parse(reText);
-            const reMerged = mergeStates(merged!, reRemote);
-            reMerged.version = Math.max(merged!.version, reRemote.version) + 1;
-            // Get new SHA
-            const shaRes = await fetch(API_BASE, {
-              headers: {
-                'Authorization': `token ${GITHUB_TOKEN}`,
-                'Accept': 'application/vnd.github.v3+json',
-              },
-            });
-            if (shaRes.ok) {
-              const shaData = await shaRes.json();
-              const reContent = toBase64(JSON.stringify(reMerged));
-              const rePutRes = await fetch(API_BASE, {
-                method: 'PUT',
-                headers: {
-                  'Authorization': `token ${GITHUB_TOKEN}`,
-                  'Accept': 'application/vnd.github.v3+json',
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: 'sync: merge', content: reContent, sha: shaData.sha }),
-              });
-              if (rePutRes.ok) {
-                setState(reMerged);
-                saveLocal(reMerged);
-                pushSuccess = true;
-              }
-            }
-          }
-        } catch {}
-      } else {
-        // Read succeeded but write not possible (no SHA/token)
-        // Still counts as success for reading
-        pushSuccess = true;
-      }
-
-      if (pushSuccess) {
-        const now = new Date();
-        setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
-      } else {
-        setLastSync('上传失败 — 请重试');
-      }
-    } catch {
-      setLastSync('网络错误 — 请检查网络后重试');
-    }
-    setSyncing(false);
+    const now = new Date();
+    setLastSync(`导入 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    return true;
   }, []);
 
   // ========== Local-only mutations ==========
@@ -391,7 +307,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   return (
     <SyncContext.Provider value={{
-      state, syncing, lastSync, syncNow,
+      state, lastSync, exportSyncCode, importSyncCode,
       updateMood, updateCoins, addCheckin, addPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
       sendMessage, markMessageRead, addWheelResult,
