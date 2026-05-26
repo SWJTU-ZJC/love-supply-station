@@ -8,9 +8,8 @@ import confetti from 'canvas-confetti';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
-  const { state, connected, connectionStatus, reconnect, getShareUrl } = useSync();
+  const { state, connected, connectionStatus, syncNow } = useSync();
   const [showHearts, setShowHearts] = useState(false);
-  const [syncCopied, setSyncCopied] = useState(false);
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
   const partnerMood = state.moods.find(m => m.userId === partner?.id)?.mood || partner?.mood || '😊';
@@ -62,27 +61,13 @@ export default function HomePage() {
           <span className={`text-xs truncate ${connected ? 'text-mint font-semibold' : 'text-text-secondary'}`}>
             {connectionStatus}
           </span>
-          {!connected && (
-            <button onClick={reconnect} className="text-xs text-blush underline flex-shrink-0">
-              重连
-            </button>
-          )}
         </div>
         <button
-          onClick={() => {
-            const url = getShareUrl();
-            navigator.clipboard.writeText(url).then(() => {
-              setSyncCopied(true);
-              setTimeout(() => setSyncCopied(false), 2000);
-            }).catch(() => {
-              // Fallback: show URL
-              prompt('复制这个链接发给对方即可同步：', url);
-            });
-          }}
+          onClick={syncNow}
           className="flex-shrink-0 px-3 py-1.5 rounded-btn bg-white text-xs font-semibold text-text-primary
                    hover:bg-blush/10 active:scale-95 transition-all shadow-soft"
         >
-          {syncCopied ? '已复制 ✓' : '🔗 分享同步'}
+          🔄 同步
         </button>
       </div>
 
