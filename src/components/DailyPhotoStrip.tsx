@@ -1,49 +1,34 @@
-import { useState, useRef } from 'react';
+import { useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Photo {
-  id: string;
-  date: string;
-  imageUrl: string;
-  userId: string;
-}
+import { useSync } from '../contexts/SyncContext';
 
 export default function DailyPhotoStrip() {
   const { user, partner } = useAuth();
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const { state, addPhoto } = useSync();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const today = new Date().toISOString().split('T')[0];
 
+  const photos = state.photos || [];
   const todayPhoto = photos.find(p => p.date === today && p.userId === user?.id);
   const partnerTodayPhoto = photos.find(p => p.date === today && p.userId === partner?.id);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Convert to data URL for demo (in production, upload to Firebase Storage)
+    if (!file || !user) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const newPhoto: Photo = {
+      addPhoto({
         id: Date.now().toString(),
         date: today,
+        userId: user.id,
         imageUrl: reader.result as string,
-        userId: user!.id,
-      };
-      setPhotos(prev => {
-        const filtered = prev.filter(p => !(p.date === today && p.userId === user!.id));
-        return [newPhoto, ...filtered];
       });
     };
     reader.readAsDataURL(file);
   };
 
-  // Generate sample photos for display
-  const allPhotos = [
-    ...(todayPhoto ? [todayPhoto] : []),
-    ...(partnerTodayPhoto ? [partnerTodayPhoto] : []),
-    ...photos.filter(p => p.date !== today),
-  ];
+  const allPhotos = photos.filter(p => !(p.date === today && (p.userId === user?.id || p.userId === partner?.id)));
+  const pastPhotos = allPhotos.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
 
   return (
     <div>
@@ -51,7 +36,6 @@ export default function DailyPhotoStrip() {
         <span>🎬</span> 我们的电影
       </h3>
       <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
-        {/* Upload card */}
         {!todayPhoto && (
           <button
             onClick={() => fileInputRef.current?.click()}
@@ -66,7 +50,6 @@ export default function DailyPhotoStrip() {
           </button>
         )}
 
-        {/* Today's photos */}
         {todayPhoto && (
           <div className="flex-shrink-0 w-36 h-48 rounded-card overflow-hidden shadow-soft snap-center relative group">
             <img src={todayPhoto.imageUrl} alt="今天" className="w-full h-full object-cover" />
@@ -85,8 +68,7 @@ export default function DailyPhotoStrip() {
           </div>
         )}
 
-        {/* Past photos */}
-        {allPhotos.filter(p => p.date !== today).slice(0, 10).map(photo => (
+        {pastPhotos.map(photo => (
           <div key={photo.id}
             className="flex-shrink-0 w-36 h-48 rounded-card overflow-hidden shadow-soft snap-center relative">
             <img src={photo.imageUrl} alt={photo.date} className="w-full h-full object-cover" />
@@ -98,21 +80,14 @@ export default function DailyPhotoStrip() {
           </div>
         ))}
 
-        {/* Empty placeholder */}
-        {allPhotos.length === 0 && !todayPhoto && (
+        {!todayPhoto && !partnerTodayPhoto && pastPhotos.length === 0 && (
           <div className="flex-shrink-0 w-36 h-48 rounded-card bg-apricot/50 flex items-center justify-center">
             <span className="text-text-secondary text-sm text-center px-2">还没有照片<br/>快来拍第一张吧~</span>
           </div>
         )}
       </div>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleUpload}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
     </div>
   );
 }

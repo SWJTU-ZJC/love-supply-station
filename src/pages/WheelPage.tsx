@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
 
 interface WheelItem {
@@ -24,6 +25,7 @@ const TAU = PI * 2;
 
 export default function WheelPage() {
   const navigate = useNavigate();
+  const { addWheelResult } = useSync();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [items] = useState<WheelItem[]>(defaultItems);
   const [spinning, setSpinning] = useState(false);
@@ -47,11 +49,9 @@ export default function WheelPage() {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Draw segments
     items.forEach((item, i) => {
       const startAngle = rotation + i * sliceAngle;
       const endAngle = startAngle + sliceAngle;
-
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.arc(cx, cy, r, startAngle, endAngle);
@@ -61,8 +61,6 @@ export default function WheelPage() {
       ctx.strokeStyle = '#FFFBF5';
       ctx.lineWidth = 2;
       ctx.stroke();
-
-      // Text
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(startAngle + sliceAngle / 2);
@@ -75,7 +73,6 @@ export default function WheelPage() {
       ctx.restore();
     });
 
-    // Center circle
     ctx.beginPath();
     ctx.arc(cx, cy, 35, 0, TAU);
     ctx.fillStyle = '#FFFBF5';
@@ -84,7 +81,6 @@ export default function WheelPage() {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Pointer (top)
     ctx.beginPath();
     ctx.moveTo(cx, cy - r - 5);
     ctx.lineTo(cx - 12, cy - r - 20);
@@ -112,7 +108,6 @@ export default function WheelPage() {
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const rotation = startRotation + (totalRotation - startRotation) * eased;
       rotationRef.current = rotation % TAU;
@@ -122,16 +117,15 @@ export default function WheelPage() {
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
         setSpinning(false);
-        // Determine winning segment
         const sliceAngle = TAU / items.length;
         const normalizedRotation = ((rotationRef.current % TAU) + TAU) % TAU;
-        const pointerAngle = -PI / 2; // pointer at top
-        // Find which slice is under pointer
+        const pointerAngle = -PI / 2;
         const adjusted = ((pointerAngle - normalizedRotation) % TAU + TAU) % TAU;
         const index = Math.floor(adjusted / sliceAngle);
         const winner = items[index];
         setResult(winner);
         setShowResult(true);
+        addWheelResult(winner.text);
         confetti({
           particleCount: 80,
           spread: 100,
@@ -140,7 +134,6 @@ export default function WheelPage() {
         });
       }
     };
-
     animFrameRef.current = requestAnimationFrame(animate);
   };
 
@@ -150,24 +143,14 @@ export default function WheelPage() {
 
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-4 py-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="absolute top-6 left-6 w-10 h-10 rounded-full bg-white shadow-soft
-                 flex items-center justify-center text-lg hover:scale-110 transition-transform"
-      >
-        ←
-      </button>
+      <button onClick={() => navigate(-1)}
+        className="absolute top-6 left-6 w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center text-lg hover:scale-110 transition-transform">←</button>
 
       <h1 className="font-title text-3xl text-text-primary mb-2">🎡 命运转盘</h1>
       <p className="text-text-secondary text-sm mb-6">看看今天能抽到什么惊喜？</p>
 
       <div className="relative">
-        <canvas
-          ref={canvasRef}
-          width={340}
-          height={340}
-          className="max-w-full"
-        />
+        <canvas ref={canvasRef} width={340} height={340} className="max-w-full" />
         <button
           onClick={spin}
           disabled={spinning}
@@ -181,39 +164,19 @@ export default function WheelPage() {
         </button>
       </div>
 
-      {/* Result Modal */}
       {showResult && result && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 p-4"
              onClick={() => setShowResult(false)}>
-          <div
-            className="bg-white rounded-card p-8 shadow-soft-lg max-w-sm w-full text-center
-                       animate-[gachaDrop_0.5s_ease-out]"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="bg-white rounded-card p-8 shadow-soft-lg max-w-sm w-full text-center animate-[gachaDrop_0.5s_ease-out]"
+               onClick={e => e.stopPropagation()}>
             <div className="text-6xl mb-4">{result.icon}</div>
             <h2 className="font-title text-2xl text-text-primary mb-2">恭喜获得</h2>
             <p className="text-3xl font-bold text-blush mb-6">{result.text}</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setShowResult(false)}
-                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold
-                         hover:bg-apricot/80 transition-colors"
-              >
-                先存着
-              </button>
-              <button
-                onClick={() => {
-                  setShowResult(false);
-                  confetti({
-                    particleCount: 100,
-                    spread: 120,
-                    origin: { y: 0.5 },
-                  });
-                }}
-                className="flex-1 py-3 rounded-btn text-white font-semibold
-                         bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                         hover:shadow-soft-lg transition-all"
-              >
+              <button onClick={() => setShowResult(false)}
+                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold hover:bg-apricot/80 transition-colors">先存着</button>
+              <button onClick={() => { setShowResult(false); confetti({ particleCount: 100, spread: 120, origin: { y: 0.5 } }); }}
+                className="flex-1 py-3 rounded-btn text-white font-semibold bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] hover:shadow-soft-lg transition-all">
                 立即使用 ✨
               </button>
             </div>

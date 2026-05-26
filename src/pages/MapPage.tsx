@@ -1,38 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import L from 'leaflet';
 import confetti from 'canvas-confetti';
 
-interface Checkin {
-  id: string;
-  userId: string;
-  latitude: number;
-  longitude: number;
-  imageUrl: string;
-  note: string;
-  createdAt: string;
-}
-
-const mockCheckins: Checkin[] = [
-  { id: '1', userId: 'user_1', latitude: 31.2304, longitude: 121.4737, imageUrl: '', note: '第一次约会的地方 💕', createdAt: '2024-01-15' },
-  { id: '2', userId: 'user_2', latitude: 31.2354, longitude: 121.4807, imageUrl: '', note: '一起看了烟花 🎆', createdAt: '2024-02-14' },
-];
-
 export default function MapPage() {
   const { user, partner } = useAuth();
+  const { state, addCheckin } = useSync();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [checkins, setCheckins] = useState<Checkin[]>(mockCheckins);
   const [showForm, setShowForm] = useState(false);
-  const [selectedCheckin, setSelectedCheckin] = useState<Checkin | null>(null);
+  const [selectedCheckin, setSelectedCheckin] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [newNote, setNewNote] = useState('');
   const [pendingPos, setPendingPos] = useState<{ lat: number; lng: number } | null>(null);
+  const markersRef = useRef<L.Marker[]>([]);
+
+  const checkins = state.checkins || [];
 
   useEffect(() => {
     if (viewMode !== 'map' || !mapContainerRef.current) return;
+
     if (mapRef.current) {
       mapRef.current.invalidateSize();
+      // Clear existing markers
+      markersRef.current.forEach(m => m.remove());
+      markersRef.current = [];
+      // Re-add markers
+      checkins.forEach(c => addMarkerToMap(mapRef.current!, c));
       return;
     }
 
@@ -44,26 +39,18 @@ export default function MapPage() {
       maxZoom: 19,
     }).addTo(map);
 
-    // Add existing checkins
-    checkins.forEach(c => {
-      addMarker(map, c);
-    });
+    checkins.forEach(c => addMarkerToMap(map, c));
 
-    // Long press / click to add
     map.on('click', (e: L.LeafletMouseEvent) => {
       setPendingPos({ lat: e.latlng.lat, lng: e.latlng.lng });
       setShowForm(true);
     });
 
     mapRef.current = map;
+    return () => { map.remove(); mapRef.current = null; };
+  }, [viewMode, checkins]);
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, [viewMode]);
-
-  const addMarker = (map: L.Map, checkin: Checkin) => {
+  const addMarkerToMap = (map: L.Map, checkin: any) => {
     const icon = L.divIcon({
       className: 'custom-marker',
       iconSize: [16, 16],
@@ -78,43 +65,31 @@ export default function MapPage() {
       </div>
     `);
     marker.on('click', () => setSelectedCheckin(checkin));
+    markersRef.current.push(marker);
   };
 
   const handleAddCheckin = () => {
     if (!pendingPos || !newNote.trim() || !user) return;
-    const checkin: Checkin = {
-      id: Date.now().toString(),
+    addCheckin({
       userId: user.id,
       latitude: pendingPos.lat,
       longitude: pendingPos.lng,
       imageUrl: '',
       note: newNote.trim(),
       createdAt: new Date().toISOString().split('T')[0],
-    };
-    const updated = [...checkins, checkin];
-    setCheckins(updated);
-    if (mapRef.current) addMarker(mapRef.current, checkin);
+    });
     setNewNote('');
     setShowForm(false);
     setPendingPos(null);
-    // Reward coins
-    // updateUser({ coins: user.coins + 2 });
-    confetti({
-      particleCount: 30,
-      spread: 50,
-      origin: { y: 0.8 },
-      colors: ['#FFB3B3', '#A0C4FF'],
-    });
+    confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 }, colors: ['#FFB3B3', '#A0C4FF'] });
   };
 
   return (
     <div className="relative h-[calc(100vh-5rem)]">
-      {/* Toggle button */}
       <button
         onClick={() => setViewMode(v => v === 'map' ? 'list' : 'map')}
         className="absolute top-4 right-4 z-[1000] bg-white rounded-full px-4 py-2
-                 shadow-soft text-sm font-semibold text-text-primary
-                 hover:shadow-soft-lg transition-all"
+                 shadow-soft text-sm font-semibold text-text-primary hover:shadow-soft-lg transition-all"
       >
         {viewMode === 'map' ? '📋 列表' : '🗺️ 地图'}
       </button>
@@ -130,9 +105,7 @@ export default function MapPage() {
                 {c.imageUrl ? (
                   <img src={c.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover" />
                 ) : (
-                  <div className="w-20 h-20 rounded-xl bg-apricot flex items-center justify-center text-2xl">
-                    📍
-                  </div>
+                  <div className="w-20 h-20 rounded-xl bg-apricot flex items-center justify-center text-2xl">📍</div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
@@ -149,7 +122,6 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Add checkin form */}
       {showForm && pendingPos && (
         <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
           <div className="w-full max-w-app bg-white rounded-t-card shadow-soft-lg p-5 pointer-events-auto
@@ -164,19 +136,11 @@ export default function MapPage() {
               autoFocus
             />
             <div className="flex gap-3">
-              <button
-                onClick={() => { setShowForm(false); setPendingPos(null); }}
-                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleAddCheckin}
-                disabled={!newNote.trim()}
+              <button onClick={() => { setShowForm(false); setPendingPos(null); }}
+                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold">取消</button>
+              <button onClick={handleAddCheckin} disabled={!newNote.trim()}
                 className="flex-1 py-3 rounded-btn text-white font-semibold
-                         bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                         disabled:opacity-50"
-              >
+                         bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] disabled:opacity-50">
                 记录 💕
               </button>
             </div>
@@ -184,7 +148,6 @@ export default function MapPage() {
         </div>
       )}
 
-      {/* Selected checkin popup */}
       {selectedCheckin && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[2000] p-4"
              onClick={() => setSelectedCheckin(null)}>
@@ -195,11 +158,9 @@ export default function MapPage() {
             )}
             <p className="text-text-primary text-base mb-2">{selectedCheckin.note}</p>
             <p className="text-text-secondary text-sm">{selectedCheckin.createdAt}</p>
-            <button
-              onClick={() => setSelectedCheckin(null)}
+            <button onClick={() => setSelectedCheckin(null)}
               className="mt-4 w-full py-3 rounded-btn text-white font-semibold
-                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]"
-            >
+                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]">
               关闭
             </button>
           </div>

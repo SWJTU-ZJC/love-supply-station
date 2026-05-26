@@ -1,48 +1,27 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
-
-interface Thing {
-  id: string;
-  text: string;
-  isDone: boolean;
-  doneTime: string | null;
-  proposedBy: string;
-}
-
-const defaultThings: Thing[] = [
-  { id: '1', text: '一起看一场日出', isDone: false, doneTime: null, proposedBy: 'me' },
-  { id: '2', text: '牵手走过陌生的街道', isDone: false, doneTime: null, proposedBy: 'partner' },
-  { id: '3', text: '一起做饭', isDone: true, doneTime: '2024-03-15', proposedBy: 'me' },
-  { id: '4', text: '给对方写一封情书', isDone: false, doneTime: null, proposedBy: 'me' },
-  { id: '5', text: '一起看一场电影', isDone: true, doneTime: '2024-02-20', proposedBy: 'partner' },
-  { id: '6', text: '在雨中漫步', isDone: false, doneTime: null, proposedBy: 'partner' },
-  { id: '7', text: '给对方准备惊喜早餐', isDone: false, doneTime: null, proposedBy: 'me' },
-  { id: '8', text: '一起去游乐园', isDone: false, doneTime: null, proposedBy: 'partner' },
-  { id: '9', text: '拍一组情侣写真', isDone: false, doneTime: null, proposedBy: 'me' },
-  { id: '10', text: '一起数星星', isDone: false, doneTime: null, proposedBy: 'partner' },
-  { id: '11', text: '录一首合唱的歌', isDone: false, doneTime: null, proposedBy: 'me' },
-  { id: '12', text: '给彼此取一个专属昵称', isDone: true, doneTime: '2024-01-01', proposedBy: 'partner' },
-];
 
 export default function LittleThingsPage() {
   const navigate = useNavigate();
-  const { user, partner, updateUser } = useAuth();
-  const [things, setThings] = useState<Thing[]>(defaultThings);
+  const { user, partner } = useAuth();
+  const { state, toggleLittleThing, addLittleThing, updateCoins } = useSync();
   const [showAdd, setShowAdd] = useState(false);
   const [newThing, setNewThing] = useState('');
 
+  const things = state.littleThings || [];
   const doneCount = things.filter(t => t.isDone).length;
-  const progress = Math.round((doneCount / things.length) * 100);
+  const progress = things.length > 0 ? Math.round((doneCount / things.length) * 100) : 0;
 
-  const handleToggle = (thing: Thing) => {
-    if (thing.isDone) return;
-    setThings(prev => prev.map(t =>
-      t.id === thing.id ? { ...t, isDone: true, doneTime: new Date().toISOString().split('T')[0] } : t
-    ));
-    // Reward coins
-    if (user) updateUser({ coins: user.coins + 5 });
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 50;
+
+  const handleToggle = (id: string) => {
+    const thing = things.find(t => t.id === id);
+    if (!thing || thing.isDone) return;
+    toggleLittleThing(id);
+    updateCoins(myCoins + 5);
     confetti({
       particleCount: 40,
       spread: 60,
@@ -52,15 +31,13 @@ export default function LittleThingsPage() {
   };
 
   const handleAdd = () => {
-    if (!newThing.trim()) return;
-    const thing: Thing = {
-      id: Date.now().toString(),
+    if (!newThing.trim() || !user) return;
+    addLittleThing({
       text: newThing.trim(),
       isDone: false,
       doneTime: null,
-      proposedBy: 'me',
-    };
-    setThings(prev => [...prev, thing]);
+      proposedBy: user.id,
+    });
     setNewThing('');
     setShowAdd(false);
   };
@@ -77,7 +54,6 @@ export default function LittleThingsPage() {
 
       <h1 className="font-title text-3xl text-text-primary mb-2">📝 我们的100件小事</h1>
 
-      {/* Progress */}
       <div className="bg-white rounded-card p-4 shadow-soft mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold text-text-primary">完成进度</span>
@@ -95,12 +71,11 @@ export default function LittleThingsPage() {
         <p className="text-xs text-text-secondary mt-2">每完成一件小事获得 🪙 5 金币</p>
       </div>
 
-      {/* List */}
       <div className="space-y-2 mb-20">
         {things.map(thing => (
           <button
             key={thing.id}
-            onClick={() => handleToggle(thing)}
+            onClick={() => handleToggle(thing.id)}
             disabled={thing.isDone}
             className={`w-full flex items-center gap-3 p-4 rounded-sm-card text-left
                        transition-all duration-300
@@ -126,14 +101,13 @@ export default function LittleThingsPage() {
             )}
             {!thing.isDone && (
               <span className="text-xs text-text-secondary">
-                {thing.proposedBy === 'me' ? '我' : partner?.nickname} 提议
+                {thing.proposedBy === user?.id ? '我' : partner?.nickname} 提议
               </span>
             )}
           </button>
         ))}
       </div>
 
-      {/* Add button */}
       {!showAdd ? (
         <button
           onClick={() => setShowAdd(true)}
@@ -159,19 +133,11 @@ export default function LittleThingsPage() {
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
           />
           <div className="flex gap-3">
-            <button
-              onClick={() => setShowAdd(false)}
-              className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold"
-            >
-              取消
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={!newThing.trim()}
+            <button onClick={() => setShowAdd(false)}
+              className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold">取消</button>
+            <button onClick={handleAdd} disabled={!newThing.trim()}
               className="flex-1 py-3 rounded-btn text-white font-semibold
-                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                       disabled:opacity-50"
-            >
+                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] disabled:opacity-50">
               添加 💝
             </button>
           </div>

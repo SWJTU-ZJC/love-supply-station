@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import MoodBar from '../components/MoodBar';
 import DailyPhotoStrip from '../components/DailyPhotoStrip';
 import FeatureGrid from '../components/FeatureGrid';
@@ -7,10 +8,15 @@ import confetti from 'canvas-confetti';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
+  const { state, connected } = useSync();
   const [showHearts, setShowHearts] = useState(false);
 
+  const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
+  const partnerMood = state.moods.find(m => m.userId === partner?.id)?.mood || partner?.mood || '😊';
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? user?.coins ?? 50;
+  const partnerCoins = state.coins.find(c => c.userId === partner?.id)?.coins ?? partner?.coins ?? 50;
+
   useEffect(() => {
-    // Welcome confetti on first load
     const timer = setTimeout(() => {
       confetti({
         particleCount: 50,
@@ -35,18 +41,22 @@ export default function HomePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-title text-3xl text-text-primary">恋爱补给站</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-text-secondary text-sm">
+              {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
+            </p>
+            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-mint animate-pulse' : 'bg-text-secondary/30'}`}
+                  title={connected ? '已连接' : '等待连接...'} />
+          </div>
         </div>
         <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-soft">
           <span className="text-lg">🪙</span>
-          <span className="font-semibold text-sunset">{user.coins}</span>
+          <span className="font-semibold text-sunset">{myCoins}</span>
         </div>
       </div>
 
       {/* Mood Bar */}
-      <MoodBar onMoodSelect={handleMoodSelect} />
+      <MoodBar currentMood={myMood} onMoodSelect={handleMoodSelect} />
 
       {/* Partner Status Card */}
       <div className="bg-white rounded-card p-5 shadow-soft">
@@ -56,20 +66,20 @@ export default function HomePage() {
                           ring-4 ring-blush/20">
               {partner.avatar}
             </div>
-            <div className="absolute -bottom-1 -right-1 text-xl">{partner.mood}</div>
+            <div className="absolute -bottom-1 -right-1 text-xl">{partnerMood}</div>
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg text-text-primary">{partner.nickname}</h3>
             <p className="text-text-secondary text-sm mt-0.5">
-              {partner.mood === '🥺' ? '正在想你 💕' :
-               partner.mood === '😤' ? '心情不太好...' :
-               partner.mood === '😴' ? '今天有点累' :
-               partner.mood === '🥰' ? '求安慰~' :
+              {partnerMood === '🥺' ? '正在想你 💕' :
+               partnerMood === '😤' ? '心情不太好...' :
+               partnerMood === '😴' ? '今天有点累' :
+               partnerMood === '🥰' ? '求安慰~' :
                '心情不错 😊'}
             </p>
             <div className="flex items-center gap-1 mt-1.5">
               <span className="text-xs">🪙</span>
-              <span className="text-xs text-text-secondary">{partner.coins} 金币</span>
+              <span className="text-xs text-text-secondary">{partnerCoins} 金币</span>
             </div>
           </div>
         </div>

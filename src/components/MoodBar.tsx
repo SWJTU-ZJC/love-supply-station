@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncContext';
 import type { Mood } from '../types';
 
 const moods: { emoji: Mood; label: string }[] = [
@@ -10,10 +10,10 @@ const moods: { emoji: Mood; label: string }[] = [
   { emoji: '🥰', label: '求安慰' },
 ];
 
-export default function MoodBar({ onMoodSelect }: { onMoodSelect: () => void }) {
-  const { user, updateUser } = useAuth();
-  const [selected, setSelected] = useState<Mood>(user?.mood as Mood || '😊');
-  const [animating, setAnimating] = useState<Mood | null>(null);
+export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: string; onMoodSelect: () => void }) {
+  const { updateMood } = useSync();
+  const [selected, setSelected] = useState<string>(currentMood);
+  const [animating, setAnimating] = useState<string | null>(null);
 
   const handleMood = (mood: Mood) => {
     if (mood === selected) return;
@@ -21,9 +21,8 @@ export default function MoodBar({ onMoodSelect }: { onMoodSelect: () => void }) 
     setTimeout(() => {
       setSelected(mood);
       setAnimating(null);
-      updateUser({ mood });
+      updateMood(mood);
       onMoodSelect();
-      // Trigger notification simulation
       if (mood === '🥺' && Notification.permission === 'default') {
         Notification.requestPermission();
       }
