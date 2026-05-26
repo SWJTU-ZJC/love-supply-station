@@ -62,7 +62,24 @@ const SyncContext = createContext<SyncContextType | null>(null);
 
 const STORAGE_KEY = 'love-supply-data';
 
-// GitHub API config
+// ========== Base64 helpers (UTF-8 safe) ==========
+
+function toBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function fromBase64(b64: string): string {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+// ========== GitHub API config ==========
+
 const _tc = [103,104,111,95,69,72,75,116,52,102,113,90,102,104,75,67,55,104,113,106,88,81,56,84,77,114,106,48,72,55,70,117,110,86,48,49,89,117,117,111];
 const GITHUB_TOKEN = String.fromCharCode.apply(null, _tc);
 const REPO_OWNER = 'SWJTU-ZJC';
@@ -119,7 +136,7 @@ async function fetchRemote(): Promise<SharedState | null> {
     if (!res.ok) return null;
     const data = await res.json();
     currentSHA = data.sha;
-    const content = JSON.parse(atob(data.content));
+    const content = JSON.parse(fromBase64(data.content));
     return content;
   } catch {
     return null;
@@ -128,7 +145,7 @@ async function fetchRemote(): Promise<SharedState | null> {
 
 async function pushRemote(state: SharedState): Promise<boolean> {
   try {
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+    const content = toBase64(JSON.stringify(state));
     const body: any = {
       message: 'sync: update data',
       content,
@@ -156,7 +173,7 @@ async function pushRemote(state: SharedState): Promise<boolean> {
       if (remote) {
         const merged = mergeStates(state, remote);
         merged.version = Math.max(state.version, remote.version) + 1;
-        const retryContent = btoa(unescape(encodeURIComponent(JSON.stringify(merged))));
+        const retryContent = toBase64(JSON.stringify(merged));
         const retryBody: any = { message: 'sync: merge', content: retryContent, sha: currentSHA };
         const retryRes = await fetch(API_BASE, {
           method: 'PUT',
@@ -383,8 +400,6 @@ export function useSync() {
 }
 
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
-  if (remote.version <= local.version) return local;
-
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
     const map = new Map<string, T>();
     a.forEach(x => map.set(x.id, x));
