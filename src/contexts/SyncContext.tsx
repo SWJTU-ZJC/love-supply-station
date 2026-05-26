@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 
 // ========== Shared State Types ==========
@@ -34,17 +34,11 @@ export interface SharedState {
   wheelResults: { userId: string; result: string; timestamp: number; }[];
 }
 
-const emptyState: SharedState = {
-  version: 1,
-  moods: [], coins: [], checkins: [], photos: [],
-  littleThings: getDefaultLittleThings(), capsules: [], messages: [], wheelResults: [],
-};
-
 interface SyncContextType {
   state: SharedState;
-  connected: boolean;
-  connectionStatus: string;
-  syncNow: () => void;
+  syncing: boolean;
+  lastSync: string;
+  syncNow: () => Promise<void>;
   updateMood: (mood: string) => void;
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
@@ -82,12 +76,7 @@ function fromBase64(b64: string): string {
 
 const _tc = [103,104,111,95,69,72,75,116,52,102,113,90,102,104,75,67,55,104,113,106,88,81,56,84,77,114,106,48,72,55,70,117,110,86,48,49,89,117,117,111];
 const GITHUB_TOKEN = String.fromCharCode.apply(null, _tc);
-const REPO_OWNER = 'SWJTU-ZJC';
-const REPO_NAME = 'love-supply-station';
-const SYNC_FILE = 'sync.json';
-const API_BASE = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${SYNC_FILE}`;
-
-let currentSHA = '';
+const API_BASE = `https://api.github.com/repos/SWJTU-ZJC/love-supply-station/contents/sync.json`;
 
 function loadLocal(): SharedState {
   try {
@@ -97,16 +86,24 @@ function loadLocal(): SharedState {
       if (parsed.littleThings?.length) return parsed;
     }
   } catch {}
-  return { ...emptyState, littleThings: getDefaultLittleThings() };
+  return { ...getEmptyState(), littleThings: getDefaultLittleThings() };
 }
 
 function saveLocal(state: SharedState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    const slim = { ...state, photos: state.photos.slice(-5), checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })) };
+    const slim = { ...state, photos: state.photos.slice(-5), checkins: state.checkins.map((c: any) => ({ ...c, imageUrl: '' })) };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(slim)); } catch {}
   }
+}
+
+function getEmptyState(): SharedState {
+  return {
+    version: 1,
+    moods: [], coins: [], checkins: [], photos: [],
+    littleThings: [], capsules: [], messages: [], wheelResults: [],
+  };
 }
 
 function getDefaultLittleThings(): SharedLittleThing[] {
@@ -124,280 +121,7 @@ function getDefaultLittleThings(): SharedLittleThing[] {
   ];
 }
 
-async function fetchRemote(): Promise<SharedState | null> {
-  try {
-    const res = await fetch(API_BASE, {
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Cache-Control': 'no-cache',
-      },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    currentSHA = data.sha;
-    const content = JSON.parse(fromBase64(data.content));
-    return content;
-  } catch {
-    return null;
-  }
-}
-
-async function pushRemote(state: SharedState): Promise<boolean> {
-  try {
-    const content = toBase64(JSON.stringify(state));
-    const body: any = {
-      message: 'sync: update data',
-      content,
-    };
-    if (currentSHA) {
-      body.sha = currentSHA;
-    }
-    const res = await fetch(API_BASE, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      currentSHA = data.content?.sha || currentSHA;
-      return true;
-    }
-    // If SHA conflict, re-fetch and retry
-    if (res.status === 409) {
-      const remote = await fetchRemote();
-      if (remote) {
-        const merged = mergeStates(state, remote);
-        merged.version = Math.max(state.version, remote.version) + 1;
-        const retryContent = toBase64(JSON.stringify(merged));
-        const retryBody: any = { message: 'sync: merge', content: retryContent, sha: currentSHA };
-        const retryRes = await fetch(API_BASE, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `token ${GITHUB_TOKEN}`,
-            'Accept': 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(retryBody),
-        });
-        if (retryRes.ok) {
-          const d = await retryRes.json();
-          currentSHA = d.content?.sha || currentSHA;
-          return true;
-        }
-      }
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-export function SyncProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  const [state, setState] = useState<SharedState>(loadLocal);
-  const [connected, setConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState('等待初始化...');
-  const pollingRef = useRef<ReturnType<typeof setInterval>>(undefined);
-  const pushQueueRef = useRef<SharedState | null>(null);
-  const pushingRef = useRef(false);
-
-  // Save to localStorage
-  useEffect(() => {
-    saveLocal(state);
-  }, [state]);
-
-  // Initial fetch + start polling
-  useEffect(() => {
-    if (!user) return;
-
-    const doFetch = async () => {
-      const remote = await fetchRemote();
-      if (remote) {
-        setConnected(true);
-        setConnectionStatus('已连接 GitHub Sync ✓');
-        setState(prev => {
-          const merged = mergeStates(prev, remote);
-          saveLocal(merged);
-          return merged;
-        });
-      } else {
-        setConnectionStatus('离线模式 (数据保存在本地)');
-      }
-    };
-
-    doFetch();
-
-    // Poll every 2 seconds
-    pollingRef.current = setInterval(async () => {
-      const remote = await fetchRemote();
-      if (remote) {
-        setConnected(true);
-        setConnectionStatus('已连接 GitHub Sync ✓');
-        setState(prev => {
-          if (remote.version <= prev.version) return prev;
-          const merged = mergeStates(prev, remote);
-          saveLocal(merged);
-          return merged;
-        });
-      } else {
-        setConnectionStatus('离线模式 (数据保存在本地)');
-      }
-    }, 2000);
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [user?.id]);
-
-  // Push queue processor
-  useEffect(() => {
-    if (!pushQueueRef.current) return;
-    const doPush = async () => {
-      if (pushingRef.current) return;
-      pushingRef.current = true;
-      const toPush = pushQueueRef.current;
-      pushQueueRef.current = null;
-      const success = await pushRemote(toPush!);
-      if (success) {
-        setConnectionStatus('已连接 GitHub Sync ✓');
-      } else {
-        // Retry after delay
-        setTimeout(() => {
-          pushQueueRef.current = toPush;
-        }, 3000);
-      }
-      pushingRef.current = false;
-    };
-    doPush();
-  }, [state.version]);
-
-  const syncNow = useCallback(async () => {
-    const remote = await fetchRemote();
-    if (remote) {
-      setState(prev => {
-        const merged = mergeStates(prev, remote);
-        saveLocal(merged);
-        return merged;
-      });
-    }
-  }, []);
-
-  // ========== Actions - write local + push remote ==========
-
-  const updateStateAndPush = useCallback((updater: (prev: SharedState) => SharedState) => {
-    setState(prev => {
-      const next = updater(prev);
-      next.version = prev.version + 1;
-      saveLocal(next);
-      pushQueueRef.current = next;
-      return next;
-    });
-  }, []);
-
-  const updateMood = useCallback((mood: string) => {
-    if (!user) return;
-    updateStateAndPush(prev => ({
-      ...prev,
-      moods: [...prev.moods.filter(m => m.userId !== user.id), { userId: user.id, mood, updatedAt: Date.now() }],
-    }));
-  }, [user, updateStateAndPush]);
-
-  const updateCoins = useCallback((coins: number) => {
-    if (!user) return;
-    updateStateAndPush(prev => ({
-      ...prev,
-      coins: [...prev.coins.filter(c => c.userId !== user.id), { userId: user.id, coins }],
-    }));
-  }, [user, updateStateAndPush]);
-
-  const addCheckin = useCallback((c: Omit<SharedCheckin, 'id'>) => {
-    const checkin: SharedCheckin = { ...c, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
-    updateStateAndPush(prev => ({ ...prev, checkins: [...prev.checkins, checkin] }));
-  }, [updateStateAndPush]);
-
-  const addPhoto = useCallback((p: SharedPhoto) => {
-    updateStateAndPush(prev => ({
-      ...prev,
-      photos: [...prev.photos.filter(x => !(x.date === p.date && x.userId === p.userId)), p],
-    }));
-  }, [updateStateAndPush]);
-
-  const toggleLittleThing = useCallback((id: string) => {
-    updateStateAndPush(prev => ({
-      ...prev,
-      littleThings: prev.littleThings.map(t =>
-        t.id === id && !t.isDone ? { ...t, isDone: true, doneTime: new Date().toISOString().split('T')[0] } : t
-      ),
-    }));
-  }, [updateStateAndPush]);
-
-  const addLittleThing = useCallback((t: Omit<SharedLittleThing, 'id'>) => {
-    const thing: SharedLittleThing = { ...t, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
-    updateStateAndPush(prev => ({ ...prev, littleThings: [...prev.littleThings, thing] }));
-  }, [updateStateAndPush]);
-
-  const addCapsule = useCallback((c: Omit<SharedCapsule, 'id'>) => {
-    const capsule: SharedCapsule = { ...c, id: Date.now().toString() };
-    updateStateAndPush(prev => ({ ...prev, capsules: [...prev.capsules, capsule] }));
-  }, [updateStateAndPush]);
-
-  const openCapsule = useCallback((id: string) => {
-    updateStateAndPush(prev => ({
-      ...prev,
-      capsules: prev.capsules.map(c => c.id === id ? { ...c, isOpened: true } : c),
-    }));
-  }, [updateStateAndPush]);
-
-  const sendMessage = useCallback((content: string) => {
-    if (!user) return;
-    const msg: SharedMessage = {
-      id: Date.now().toString(),
-      fromUserId: user.id,
-      toUserId: user.partnerId,
-      content,
-      isRead: false,
-      createdAt: Date.now(),
-    };
-    updateStateAndPush(prev => ({ ...prev, messages: [...prev.messages, msg] }));
-  }, [user, updateStateAndPush]);
-
-  const markMessageRead = useCallback((id: string) => {
-    updateStateAndPush(prev => ({
-      ...prev,
-      messages: prev.messages.map(m => m.id === id ? { ...m, isRead: true } : m),
-    }));
-  }, [updateStateAndPush]);
-
-  const addWheelResult = useCallback((result: string) => {
-    if (!user) return;
-    updateStateAndPush(prev => ({
-      ...prev,
-      wheelResults: [...prev.wheelResults, { userId: user.id, result, timestamp: Date.now() }],
-    }));
-  }, [user, updateStateAndPush]);
-
-  return (
-    <SyncContext.Provider value={{
-      state, connected, connectionStatus, syncNow,
-      updateMood, updateCoins, addCheckin, addPhoto,
-      toggleLittleThing, addLittleThing, addCapsule, openCapsule,
-      sendMessage, markMessageRead, addWheelResult,
-    }}>
-      {children}
-    </SyncContext.Provider>
-  );
-}
-
-export function useSync() {
-  const ctx = useContext(SyncContext);
-  if (!ctx) throw new Error('useSync must be used within SyncProvider');
-  return ctx;
-}
+// ========== Merge logic ==========
 
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
@@ -435,4 +159,215 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     messages: mergeById(local.messages, remote.messages),
     wheelResults: mergeWheel(local.wheelResults, remote.wheelResults),
   };
+}
+
+export function SyncProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const [state, setState] = useState<SharedState>(loadLocal);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState('');
+
+  // Save to localStorage whenever state changes
+  const updateLocal = useCallback((updater: (prev: SharedState) => SharedState) => {
+    setState(prev => {
+      const next = updater(prev);
+      next.version = prev.version + 1;
+      saveLocal(next);
+      return next;
+    });
+  }, []);
+
+  // ========== Manual sync ==========
+
+  const syncNow = useCallback(async () => {
+    setSyncing(true);
+    try {
+      // 1. Fetch remote
+      const res = await fetch(API_BASE, {
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        },
+      });
+      if (!res.ok) {
+        setLastSync('离线 — 无法连接');
+        setSyncing(false);
+        return;
+      }
+      const data = await res.json();
+      const remoteSHA: string = data.sha;
+      const remote: SharedState = JSON.parse(fromBase64(data.content));
+
+      // 2. Get current local state (use functional update to get latest)
+      let merged: SharedState;
+      let pushSuccess = false;
+
+      setState(prev => {
+        merged = mergeStates(prev, remote);
+        merged.version = Math.max(prev.version, remote.version) + 1;
+        return merged;
+      });
+
+      // Wait for state update to propagate
+      await new Promise(r => setTimeout(r, 0));
+
+      // 3. Push merged state to remote
+      const pushContent = toBase64(JSON.stringify(merged!));
+      const putRes = await fetch(API_BASE, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: 'sync', content: pushContent, sha: remoteSHA }),
+      });
+
+      if (putRes.ok) {
+        pushSuccess = true;
+      } else if (putRes.status === 409) {
+        // Conflict: re-fetch and re-merge
+        const reRes = await fetch(API_BASE, {
+          headers: {
+            'Authorization': `token ${GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Cache-Control': 'no-cache',
+          },
+        });
+        if (reRes.ok) {
+          const reData = await reRes.json();
+          const reRemote = JSON.parse(fromBase64(reData.content));
+          const reMerged = mergeStates(merged!, reRemote);
+          reMerged.version = Math.max(merged!.version, reRemote.version) + 1;
+          const reContent = toBase64(JSON.stringify(reMerged));
+          const rePutRes = await fetch(API_BASE, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `token ${GITHUB_TOKEN}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message: 'sync: merge', content: reContent, sha: reData.sha }),
+          });
+          if (rePutRes.ok) {
+            setState(reMerged);
+            saveLocal(reMerged);
+            pushSuccess = true;
+          }
+        }
+      }
+
+      if (pushSuccess) {
+        const now = new Date();
+        setLastSync(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+      } else {
+        setLastSync('同步失败 — 请重试');
+      }
+    } catch {
+      setLastSync('同步失败 — 网络错误');
+    }
+    setSyncing(false);
+  }, []);
+
+  // ========== Local-only mutations ==========
+
+  const updateMood = useCallback((mood: string) => {
+    if (!user) return;
+    updateLocal(prev => ({
+      ...prev,
+      moods: [...prev.moods.filter(m => m.userId !== user.id), { userId: user.id, mood, updatedAt: Date.now() }],
+    }));
+  }, [user, updateLocal]);
+
+  const updateCoins = useCallback((coins: number) => {
+    if (!user) return;
+    updateLocal(prev => ({
+      ...prev,
+      coins: [...prev.coins.filter(c => c.userId !== user.id), { userId: user.id, coins }],
+    }));
+  }, [user, updateLocal]);
+
+  const addCheckin = useCallback((c: Omit<SharedCheckin, 'id'>) => {
+    const checkin: SharedCheckin = { ...c, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
+    updateLocal(prev => ({ ...prev, checkins: [...prev.checkins, checkin] }));
+  }, [updateLocal]);
+
+  const addPhoto = useCallback((p: SharedPhoto) => {
+    updateLocal(prev => ({
+      ...prev,
+      photos: [...prev.photos.filter(x => !(x.date === p.date && x.userId === p.userId)), p],
+    }));
+  }, [updateLocal]);
+
+  const toggleLittleThing = useCallback((id: string) => {
+    updateLocal(prev => ({
+      ...prev,
+      littleThings: prev.littleThings.map(t =>
+        t.id === id && !t.isDone ? { ...t, isDone: true, doneTime: new Date().toISOString().split('T')[0] } : t
+      ),
+    }));
+  }, [updateLocal]);
+
+  const addLittleThing = useCallback((t: Omit<SharedLittleThing, 'id'>) => {
+    const thing: SharedLittleThing = { ...t, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
+    updateLocal(prev => ({ ...prev, littleThings: [...prev.littleThings, thing] }));
+  }, [updateLocal]);
+
+  const addCapsule = useCallback((c: Omit<SharedCapsule, 'id'>) => {
+    const capsule: SharedCapsule = { ...c, id: Date.now().toString() };
+    updateLocal(prev => ({ ...prev, capsules: [...prev.capsules, capsule] }));
+  }, [updateLocal]);
+
+  const openCapsule = useCallback((id: string) => {
+    updateLocal(prev => ({
+      ...prev,
+      capsules: prev.capsules.map(c => c.id === id ? { ...c, isOpened: true } : c),
+    }));
+  }, [updateLocal]);
+
+  const sendMessage = useCallback((content: string) => {
+    if (!user) return;
+    const msg: SharedMessage = {
+      id: Date.now().toString(),
+      fromUserId: user.id,
+      toUserId: user.partnerId,
+      content,
+      isRead: false,
+      createdAt: Date.now(),
+    };
+    updateLocal(prev => ({ ...prev, messages: [...prev.messages, msg] }));
+  }, [user, updateLocal]);
+
+  const markMessageRead = useCallback((id: string) => {
+    updateLocal(prev => ({
+      ...prev,
+      messages: prev.messages.map(m => m.id === id ? { ...m, isRead: true } : m),
+    }));
+  }, [updateLocal]);
+
+  const addWheelResult = useCallback((result: string) => {
+    if (!user) return;
+    updateLocal(prev => ({
+      ...prev,
+      wheelResults: [...prev.wheelResults, { userId: user.id, result, timestamp: Date.now() }],
+    }));
+  }, [user, updateLocal]);
+
+  return (
+    <SyncContext.Provider value={{
+      state, syncing, lastSync, syncNow,
+      updateMood, updateCoins, addCheckin, addPhoto,
+      toggleLittleThing, addLittleThing, addCapsule, openCapsule,
+      sendMessage, markMessageRead, addWheelResult,
+    }}>
+      {children}
+    </SyncContext.Provider>
+  );
+}
+
+export function useSync() {
+  const ctx = useContext(SyncContext);
+  if (!ctx) throw new Error('useSync must be used within SyncProvider');
+  return ctx;
 }

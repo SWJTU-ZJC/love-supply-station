@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
-  const { state, connected, connectionStatus, syncNow } = useSync();
+  const { state, syncing, lastSync, syncNow } = useSync();
   const [showHearts, setShowHearts] = useState(false);
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
@@ -53,21 +53,21 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Sync Status Bar */}
-      <div className={`rounded-card p-3 flex items-center justify-between gap-2 text-sm
-        ${connected ? 'bg-mint/10 border border-mint/30' : 'bg-apricot/50 border border-dashed border-blush/30'}`}>
+      {/* Sync Bar */}
+      <div className="rounded-card p-3 flex items-center justify-between gap-2 text-sm bg-white/80 border border-apricot/30">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${connected ? 'bg-mint animate-pulse' : 'bg-sunset'}`} />
-          <span className={`text-xs truncate ${connected ? 'text-mint font-semibold' : 'text-text-secondary'}`}>
-            {connectionStatus}
+          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${syncing ? 'bg-sunset animate-pulse' : lastSync ? 'bg-mint' : 'bg-text-secondary/30'}`} />
+          <span className="text-xs truncate text-text-secondary">
+            {syncing ? '同步中...' : lastSync || '点击按钮同步数据'}
           </span>
         </div>
         <button
           onClick={syncNow}
-          className="flex-shrink-0 px-3 py-1.5 rounded-btn bg-white text-xs font-semibold text-text-primary
-                   hover:bg-blush/10 active:scale-95 transition-all shadow-soft"
+          disabled={syncing}
+          className="flex-shrink-0 px-4 py-1.5 rounded-btn bg-blush/10 text-xs font-semibold text-blush
+                   hover:bg-blush/20 active:scale-95 transition-all disabled:opacity-50"
         >
-          🔄 同步
+          {syncing ? '⏳' : '🔄'} {syncing ? '同步中' : '同步'}
         </button>
       </div>
 
