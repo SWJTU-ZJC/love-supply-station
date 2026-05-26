@@ -8,8 +8,9 @@ import confetti from 'canvas-confetti';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
-  const { state, connected } = useSync();
+  const { state, connected, connectionStatus, reconnect, getShareUrl } = useSync();
   const [showHearts, setShowHearts] = useState(false);
+  const [syncCopied, setSyncCopied] = useState(false);
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
   const partnerMood = state.moods.find(m => m.userId === partner?.id)?.mood || partner?.mood || '😊';
@@ -45,14 +46,44 @@ export default function HomePage() {
             <p className="text-text-secondary text-sm">
               {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
             </p>
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-mint animate-pulse' : 'bg-text-secondary/30'}`}
-                  title={connected ? '已连接' : '等待连接...'} />
           </div>
         </div>
         <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-soft">
           <span className="text-lg">🪙</span>
           <span className="font-semibold text-sunset">{myCoins}</span>
         </div>
+      </div>
+
+      {/* Sync Status Bar */}
+      <div className={`rounded-card p-3 flex items-center justify-between gap-2 text-sm
+        ${connected ? 'bg-mint/10 border border-mint/30' : 'bg-apricot/50 border border-dashed border-blush/30'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${connected ? 'bg-mint animate-pulse' : 'bg-sunset'}`} />
+          <span className={`text-xs truncate ${connected ? 'text-mint font-semibold' : 'text-text-secondary'}`}>
+            {connectionStatus}
+          </span>
+          {!connected && (
+            <button onClick={reconnect} className="text-xs text-blush underline flex-shrink-0">
+              重连
+            </button>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            const url = getShareUrl();
+            navigator.clipboard.writeText(url).then(() => {
+              setSyncCopied(true);
+              setTimeout(() => setSyncCopied(false), 2000);
+            }).catch(() => {
+              // Fallback: show URL
+              prompt('复制这个链接发给对方即可同步：', url);
+            });
+          }}
+          className="flex-shrink-0 px-3 py-1.5 rounded-btn bg-white text-xs font-semibold text-text-primary
+                   hover:bg-blush/10 active:scale-95 transition-all shadow-soft"
+        >
+          {syncCopied ? '已复制 ✓' : '🔗 分享同步'}
+        </button>
       </div>
 
       {/* Mood Bar */}

@@ -24,6 +24,7 @@ export interface SharedMessage {
 }
 
 export interface SharedState {
+  version: number;
   moods: SharedMood[];
   coins: SharedCoin[];
   checkins: SharedCheckin[];
@@ -35,13 +36,17 @@ export interface SharedState {
 }
 
 const emptyState: SharedState = {
+  version: 1,
   moods: [], coins: [], checkins: [], photos: [],
-  littleThings: [], capsules: [], messages: [], wheelResults: [],
+  littleThings: getDefaultLittleThings(), capsules: [], messages: [], wheelResults: [],
 };
 
 interface SyncContextType {
   state: SharedState;
   connected: boolean;
+  connectionStatus: string;
+  reconnect: () => void;
+  getShareUrl: () => string;
   updateMood: (mood: string) => void;
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
@@ -62,13 +67,23 @@ const STORAGE_KEY = 'love-supply-data';
 function loadLocal(): SharedState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.littleThings?.length) return parsed;
+    }
   } catch {}
   return { ...emptyState, littleThings: getDefaultLittleThings() };
 }
 
 function saveLocal(state: SharedState) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('localStorage full, purging old photos...');
+    // Remove large photo data if storage is full
+    const slim = { ...state, photos: state.photos.slice(-5), checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })) };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+  }
 }
 
 function getDefaultLittleThings(): SharedLittleThing[] {
@@ -86,126 +101,251 @@ function getDefaultLittleThings(): SharedLittleThing[] {
   ];
 }
 
+// PeerJS signaling servers - try multiple
+const SIGNAL_HOSTS = [
+  { host: '0.peerjs.com', port: 443, secure: true },
+  { host: 'peerjs-server.herokuapp.com', port: 443, secure: true },
+];
+
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { user, coupleCode } = useAuth();
-  const [state, setState] = useState<SharedState>(loadLocal);
+  const [state, setState] = useState<SharedState>(() => {
+    const local = loadLocal();
+    // Check URL for shared data
+    const hash = window.location.hash;
+    if (hash.includes('sync=')) {
+      try {
+        const encoded = hash.split('sync=')[1]?.split('&')[0];
+        if (encoded) {
+          const remote = JSON.parse(decodeURIComponent(atob(encoded)));
+          const merged = mergeStates(local, remote);
+          window.location.hash = '';
+          return merged;
+        }
+      } catch {}
+    }
+    return local;
+  });
   const [connected, setConnected] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('正在连接...');
   const peerRef = useRef<Peer | null>(null);
-  const connRef = useRef<any | null>(null);
-  const peerIdRef = useRef<string>('');
+  const connRef = useRef<any>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const signalIndexRef = useRef(0);
 
-  // Save to localStorage whenever state changes
+  // Save to localStorage
   useEffect(() => {
     saveLocal(state);
   }, [state]);
 
-  // Broadcast state to peer
-  const broadcast = useCallback((newState: SharedState) => {
-    if (connRef.current?.open) {
-      connRef.current.send({ type: 'SYNC', state: newState });
-    }
+  // Check URL hash periodically for incoming sync
+  useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash;
+      if (hash.includes('sync=')) {
+        try {
+          const encoded = hash.split('sync=')[1]?.split('&')[0];
+          if (encoded) {
+            const remote = JSON.parse(decodeURIComponent(atob(encoded)));
+            setState(prev => {
+              const merged = mergeStates(prev, remote);
+              saveLocal(merged);
+              return merged;
+            });
+            window.location.hash = '';
+            setConnectionStatus('已通过链接同步 ✓');
+          }
+        } catch {}
+      }
+    };
+    const interval = setInterval(checkHash, 2000);
+    window.addEventListener('hashchange', checkHash);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('hashchange', checkHash);
+    };
   }, []);
 
-  const updateState = useCallback((updater: (prev: SharedState) => SharedState) => {
-    setState(prev => {
-      const next = updater(prev);
-      saveLocal(next);
-      setTimeout(() => broadcast(next), 0);
-      return next;
-    });
-  }, [broadcast]);
+  // Generate share URL
+  const getShareUrl = useCallback(() => {
+    const slimState = {
+      ...state,
+      photos: state.photos.map(p => ({ ...p, imageUrl: p.imageUrl?.length > 500 ? '[photo]' : p.imageUrl })),
+      checkins: state.checkins.map(c => ({ ...c, imageUrl: c.imageUrl?.length > 500 ? '[photo]' : c.imageUrl })),
+    };
+    const encoded = btoa(encodeURIComponent(JSON.stringify(slimState)));
+    const base = window.location.href.split('#')[0];
+    return `${base}#/home?sync=${encoded}`;
+  }, [state]);
 
-  // ========== PeerJS Connection ==========
-  useEffect(() => {
+  // P2P connection
+  const connectPeer = useCallback((signalHost: typeof SIGNAL_HOSTS[0]) => {
+    if (!user || !coupleCode || !peerRef.current) return;
+
+    const partnerPeerId = `love-${coupleCode}-${user.partnerId}`;
+
+    setConnectionStatus(`连接中 (${signalHost.host})...`);
+
+    const conn = peerRef.current.connect(partnerPeerId, { reliable: true });
+
+    let connected = false;
+    const timeout = setTimeout(() => {
+      if (!connected) {
+        conn.close();
+        setConnectionStatus('连接超时，重试中...');
+      }
+    }, 10000);
+
+    conn.on('open', () => {
+      connected = true;
+      clearTimeout(timeout);
+      console.log('💚 P2P connected!');
+      connRef.current = conn;
+      setConnected(true);
+      setConnectionStatus('已连接 ✓');
+      // Send full state
+      setState(prev => {
+        try { conn.send({ type: 'SYNC', state: prev }); } catch {}
+        return prev;
+      });
+    });
+
+    conn.on('data', (data: any) => {
+      if (data?.type === 'SYNC' && data.state) {
+        console.log('📥 Received sync data');
+        setState(prev => mergeStates(prev, data.state));
+      }
+      if (data?.type === 'MESSAGE') {
+        setState(prev => {
+          const msg = data.message as SharedMessage;
+          if (prev.messages.find(m => m.id === msg.id)) return prev;
+          return { ...prev, messages: [...prev.messages, msg] };
+        });
+      }
+    });
+
+    conn.on('close', () => {
+      if (connRef.current === conn) {
+        connRef.current = null;
+        setConnected(false);
+        setConnectionStatus('连接断开，重连中...');
+        scheduleRetry();
+      }
+    });
+
+    conn.on('error', () => {
+      if (connRef.current === conn) {
+        connRef.current = null;
+        setConnected(false);
+        scheduleRetry();
+      }
+    });
+  }, [user, coupleCode]);
+
+  const scheduleRetry = useCallback(() => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    retryTimerRef.current = setTimeout(() => {
+      signalIndexRef.current = (signalIndexRef.current + 1) % SIGNAL_HOSTS.length;
+      if (peerRef.current && !peerRef.current.destroyed) {
+        connectPeer(SIGNAL_HOSTS[signalIndexRef.current]);
+      }
+    }, 5000);
+  }, [connectPeer]);
+
+  const reconnect = useCallback(() => {
+    if (peerRef.current) peerRef.current.destroy();
+    setConnected(false);
+    setConnectionStatus('重新连接...');
+    signalIndexRef.current = 0;
+    initPeer(SIGNAL_HOSTS[0]);
+  }, []);
+
+  const initPeer = useCallback((signalHost: typeof SIGNAL_HOSTS[0]) => {
     if (!user || !coupleCode) return;
 
     const myPeerId = `love-${coupleCode}-${user.id}`;
-    const partnerPeerId = `love-${coupleCode}-${user.partnerId}`;
-    peerIdRef.current = myPeerId;
 
-    const peer = new Peer(myPeerId, {
-      host: '0.peerjs.com',
-      port: 443,
-      secure: true,
-      debug: 1,
-    });
+    try {
+      const peer = new Peer(myPeerId, signalHost);
+      peerRef.current = peer;
 
-    peerRef.current = peer;
+      peer.on('open', () => {
+        console.log('📡 Peer ready:', myPeerId);
+        connectPeer(signalHost);
+      });
 
-    peer.on('open', () => {
-      console.log('📡 P2P ready:', myPeerId);
-      // Try to connect to partner
-      const conn = peer.connect(partnerPeerId, { reliable: true });
-      setupConnection(conn);
-    });
-
-    peer.on('connection', (conn) => {
-      console.log('📞 Incoming connection from partner');
-      setupConnection(conn);
-    });
-
-    peer.on('error', (err) => {
-      console.log('⚠️ Peer error:', err.message);
-      // Retry connection after delay
-      setTimeout(() => {
-        if (peerRef.current && !peerRef.current.destroyed) {
-          const conn = peer.connect(partnerPeerId, { reliable: true });
-          setupConnection(conn);
-        }
-      }, 5000);
-    });
-
-    function setupConnection(conn: any) {
-      conn.on('open', () => {
-        console.log('💚 Connected to partner!');
+      peer.on('connection', (conn) => {
+        console.log('📞 Incoming connection');
         connRef.current = conn;
         setConnected(true);
-        // Send full state on connect
-        setState(prev => {
-          conn.send({ type: 'SYNC', state: prev });
-          return prev;
+        setConnectionStatus('已连接 ✓');
+
+        conn.on('open', () => {
+          setState(prev => {
+            try { conn.send({ type: 'SYNC', state: prev }); } catch {}
+            return prev;
+          });
+        });
+
+        conn.on('data', (data: any) => {
+          if (data?.type === 'SYNC' && data.state) {
+            setState(prev => mergeStates(prev, data.state));
+          }
+          if (data?.type === 'MESSAGE') {
+            setState(prev => {
+              const msg = data.message as SharedMessage;
+              if (prev.messages.find(m => m.id === msg.id)) return prev;
+              return { ...prev, messages: [...prev.messages, msg] };
+            });
+          }
+        });
+
+        conn.on('close', () => {
+          setConnected(false);
+          setConnectionStatus('连接断开');
+          scheduleRetry();
         });
       });
 
-      conn.on('data', (data: any) => {
-        if (data?.type === 'SYNC' && data.state) {
-          console.log('📥 Received state from partner');
-          setState(prev => mergeStates(prev, data.state));
-        }
-        if (data?.type === 'MESSAGE') {
-          console.log('💌 New message from partner');
-          setState(prev => {
-            const msg = data.message as SharedMessage;
-            const exists = prev.messages.find(m => m.id === msg.id);
-            if (exists) return prev;
-            return { ...prev, messages: [...prev.messages, msg] };
-          });
+      peer.on('error', (err) => {
+        console.log('⚠️ Peer error:', err.message);
+        if (err.type === 'unavailable-id') {
+          // ID conflict - wait and retry
+          setTimeout(() => {
+            if (peerRef.current && !peerRef.current.destroyed) {
+              connectPeer(SIGNAL_HOSTS[signalIndexRef.current]);
+            }
+          }, 3000);
+        } else {
+          scheduleRetry();
         }
       });
 
-      conn.on('close', () => {
-        console.log('🔌 Partner disconnected');
+      peer.on('disconnected', () => {
         setConnected(false);
-        connRef.current = null;
-        // Retry
-        setTimeout(() => {
-          if (peerRef.current && !peerRef.current.destroyed) {
-            const newConn = peer.connect(partnerPeerId, { reliable: true });
-            setupConnection(newConn);
-          }
-        }, 3000);
+        setConnectionStatus('已断开');
+        if (peerRef.current && !peerRef.current.destroyed) {
+          peerRef.current.reconnect();
+        }
       });
-
-      conn.on('error', () => {
-        setConnected(false);
-      });
+    } catch (e) {
+      console.error('Failed to create peer:', e);
+      scheduleRetry();
     }
+  }, [user, coupleCode, connectPeer, scheduleRetry]);
+
+  // Initialize P2P on mount
+  useEffect(() => {
+    if (!user || !coupleCode) return;
+    signalIndexRef.current = 0;
+    initPeer(SIGNAL_HOSTS[0]);
 
     return () => {
-      if (connRef.current) connRef.current.close();
-      if (peerRef.current) peerRef.current.destroy();
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (connRef.current) try { connRef.current.close(); } catch {}
+      if (peerRef.current) try { peerRef.current.destroy(); } catch {}
     };
-  }, [user?.id, coupleCode]);
+  }, [user?.id]);
 
   // ========== Actions ==========
 
@@ -213,63 +353,60 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     updateState(prev => ({
       ...prev,
-      moods: [
-        ...prev.moods.filter(m => m.userId !== user.id),
-        { userId: user.id, mood, updatedAt: Date.now() },
-      ],
+      version: prev.version + 1,
+      moods: [...prev.moods.filter(m => m.userId !== user.id), { userId: user.id, mood, updatedAt: Date.now() }],
     }));
-  }, [user, updateState]);
+  }, [user]);
 
   const updateCoins = useCallback((coins: number) => {
     if (!user) return;
     updateState(prev => ({
       ...prev,
-      coins: [
-        ...prev.coins.filter(c => c.userId !== user.id),
-        { userId: user.id, coins },
-      ],
+      version: prev.version + 1,
+      coins: [...prev.coins.filter(c => c.userId !== user.id), { userId: user.id, coins }],
     }));
-  }, [user, updateState]);
+  }, [user]);
 
   const addCheckin = useCallback((c: Omit<SharedCheckin, 'id'>) => {
     const checkin: SharedCheckin = { ...c, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
-    updateState(prev => ({ ...prev, checkins: [...prev.checkins, checkin] }));
-  }, [updateState]);
+    updateState(prev => ({ ...prev, version: prev.version + 1, checkins: [...prev.checkins, checkin] }));
+  }, []);
 
   const addPhoto = useCallback((p: SharedPhoto) => {
     updateState(prev => ({
       ...prev,
+      version: prev.version + 1,
       photos: [...prev.photos.filter(x => !(x.date === p.date && x.userId === p.userId)), p],
     }));
-  }, [updateState]);
+  }, []);
 
   const toggleLittleThing = useCallback((id: string) => {
     updateState(prev => ({
       ...prev,
+      version: prev.version + 1,
       littleThings: prev.littleThings.map(t =>
-        t.id === id && !t.isDone
-          ? { ...t, isDone: true, doneTime: new Date().toISOString().split('T')[0] }
-          : t
+        t.id === id && !t.isDone ? { ...t, isDone: true, doneTime: new Date().toISOString().split('T')[0] } : t
       ),
     }));
-  }, [updateState]);
+  }, []);
 
   const addLittleThing = useCallback((t: Omit<SharedLittleThing, 'id'>) => {
     const thing: SharedLittleThing = { ...t, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
-    updateState(prev => ({ ...prev, littleThings: [...prev.littleThings, thing] }));
-  }, [updateState]);
+    updateState(prev => ({ ...prev, version: prev.version + 1, littleThings: [...prev.littleThings, thing] }));
+  }, []);
 
   const addCapsule = useCallback((c: Omit<SharedCapsule, 'id'>) => {
     const capsule: SharedCapsule = { ...c, id: Date.now().toString() };
-    updateState(prev => ({ ...prev, capsules: [...prev.capsules, capsule] }));
-  }, [updateState]);
+    updateState(prev => ({ ...prev, version: prev.version + 1, capsules: [...prev.capsules, capsule] }));
+  }, []);
 
   const openCapsule = useCallback((id: string) => {
     updateState(prev => ({
       ...prev,
+      version: prev.version + 1,
       capsules: prev.capsules.map(c => c.id === id ? { ...c, isOpened: true } : c),
     }));
-  }, [updateState]);
+  }, []);
 
   const sendMessage = useCallback((content: string) => {
     if (!user) return;
@@ -281,31 +418,48 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       isRead: false,
       createdAt: Date.now(),
     };
-    updateState(prev => ({ ...prev, messages: [...prev.messages, msg] }));
-    // Also send directly via data channel for immediate delivery
+    updateState(prev => ({ ...prev, version: prev.version + 1, messages: [...prev.messages, msg] }));
     if (connRef.current?.open) {
-      connRef.current.send({ type: 'MESSAGE', message: msg });
+      try { connRef.current.send({ type: 'MESSAGE', message: msg }); } catch {}
     }
-  }, [user, updateState]);
+  }, [user]);
 
   const markMessageRead = useCallback((id: string) => {
     updateState(prev => ({
       ...prev,
+      version: prev.version + 1,
       messages: prev.messages.map(m => m.id === id ? { ...m, isRead: true } : m),
     }));
-  }, [updateState]);
+  }, []);
 
   const addWheelResult = useCallback((result: string) => {
     if (!user) return;
     updateState(prev => ({
       ...prev,
+      version: prev.version + 1,
       wheelResults: [...prev.wheelResults, { userId: user.id, result, timestamp: Date.now() }],
     }));
-  }, [user, updateState]);
+  }, [user]);
+
+  // Broadcast state to peer on changes
+  const broadcast = useCallback((s: SharedState) => {
+    if (connRef.current?.open) {
+      try { connRef.current.send({ type: 'SYNC', state: s }); } catch {}
+    }
+  }, []);
+
+  const updateState = useCallback((updater: (prev: SharedState) => SharedState) => {
+    setState(prev => {
+      const next = updater(prev);
+      saveLocal(next);
+      setTimeout(() => broadcast(next), 50);
+      return next;
+    });
+  }, [broadcast]);
 
   return (
     <SyncContext.Provider value={{
-      state, connected,
+      state, connected, connectionStatus, reconnect, getShareUrl,
       updateMood, updateCoins, addCheckin, addPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
       sendMessage, markMessageRead, addWheelResult,
@@ -321,8 +475,10 @@ export function useSync() {
   return ctx;
 }
 
-// Merge partner's state with local state (partner's data wins for their own items)
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
+  // Keep the one with higher version or merge
+  if (remote.version <= local.version) return local;
+
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
     const map = new Map<string, T>();
     a.forEach(x => map.set(x.id, x));
@@ -348,6 +504,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   };
 
   return {
+    version: Math.max(local.version, remote.version),
     moods: mergeByUserId(local.moods, remote.moods, 'updatedAt'),
     coins: mergeByUserId(local.coins, remote.coins, ''),
     checkins: mergeById(local.checkins, remote.checkins),
