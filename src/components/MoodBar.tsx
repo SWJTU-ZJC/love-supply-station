@@ -1,0 +1,66 @@
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import type { Mood } from '../types';
+
+const moods: { emoji: Mood; label: string }[] = [
+  { emoji: '😊', label: '开心' },
+  { emoji: '🥺', label: '想你' },
+  { emoji: '😤', label: '生气' },
+  { emoji: '😴', label: '疲惫' },
+  { emoji: '🥰', label: '求安慰' },
+];
+
+export default function MoodBar({ onMoodSelect }: { onMoodSelect: () => void }) {
+  const { user, updateUser } = useAuth();
+  const [selected, setSelected] = useState<Mood>(user?.mood as Mood || '😊');
+  const [animating, setAnimating] = useState<Mood | null>(null);
+
+  const handleMood = (mood: Mood) => {
+    if (mood === selected) return;
+    setAnimating(mood);
+    setTimeout(() => {
+      setSelected(mood);
+      setAnimating(null);
+      updateUser({ mood });
+      onMoodSelect();
+      // Trigger notification simulation
+      if (mood === '🥺' && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      if (mood === '🥺' && Notification.permission === 'granted') {
+        new Notification('恋爱补给站', { body: 'Ta 想你啦～💕', icon: '💕' });
+      }
+    }, 300);
+  };
+
+  return (
+    <div className="bg-white rounded-card p-4 shadow-soft">
+      <p className="text-xs text-text-secondary mb-3 ml-1">今天心情怎么样？</p>
+      <div className="flex justify-between items-center gap-1 overflow-x-auto pb-1">
+        {moods.map(({ emoji, label }) => (
+          <button
+            key={emoji}
+            onClick={() => handleMood(emoji)}
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px]
+                       transition-all duration-300
+                       ${selected === emoji
+                         ? 'bg-blush/20 scale-110 shadow-soft'
+                         : 'hover:bg-apricot hover:scale-105'
+                       }
+                       ${animating === emoji ? 'animate-[shake_0.3s_ease-in-out]' : ''}
+            `}
+          >
+            <span className={`text-2xl transition-transform duration-300
+              ${selected === emoji ? 'scale-125' : ''}`}>
+              {emoji}
+            </span>
+            <span className={`text-xs transition-colors duration-300
+              ${selected === emoji ? 'text-text-primary font-semibold' : 'text-text-secondary'}`}>
+              {label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
