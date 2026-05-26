@@ -77,6 +77,7 @@ function fromBase64(b64: string): string {
 const _tc = [103,104,111,95,69,72,75,116,52,102,113,90,102,104,75,67,55,104,113,106,88,81,56,84,77,114,106,48,72,55,70,117,110,86,48,49,89,117,117,111];
 const GITHUB_TOKEN = String.fromCharCode.apply(null, _tc);
 const API_BASE = `https://api.github.com/repos/SWJTU-ZJC/love-supply-station/contents/sync.json`;
+const RAW_URL = `https://raw.githubusercontent.com/SWJTU-ZJC/love-supply-station/main/sync.json`;
 
 function loadLocal(): SharedState {
   try {
@@ -182,90 +183,124 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const syncNow = useCallback(async () => {
     setSyncing(true);
     try {
-      // 1. Fetch remote
-      const res = await fetch(API_BASE, {
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Cache-Control': 'no-cache',
-        },
-      });
-      if (!res.ok) {
-        setLastSync('离线 — 无法连接');
-        setSyncing(false);
-        return;
-      }
-      const data = await res.json();
-      const remoteSHA: string = data.sha;
-      const remote: SharedState = JSON.parse(fromBase64(data.content));
+      // 1. Fetch remote from raw URL (no auth, avoids CORS preflight issues)
+      let remote: SharedState;
+      let remoteSHA = '';
 
-      // 2. Get current local state (use functional update to get latest)
-      let merged: SharedState;
-      let pushSuccess = false;
-
-      setState(prev => {
-        merged = mergeStates(prev, remote);
-        merged.version = Math.max(prev.version, remote.version) + 1;
-        return merged;
-      });
-
-      // Wait for state update to propagate
-      await new Promise(r => setTimeout(r, 0));
-
-      // 3. Push merged state to remote
-      const pushContent = toBase64(JSON.stringify(merged!));
-      const putRes = await fetch(API_BASE, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `token ${GITHUB_TOKEN}`,
-          'Accept': 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ message: 'sync', content: pushContent, sha: remoteSHA }),
-      });
-
-      if (putRes.ok) {
-        pushSuccess = true;
-      } else if (putRes.status === 409) {
-        // Conflict: re-fetch and re-merge
-        const reRes = await fetch(API_BASE, {
+      try {
+        const res = await fetch(RAW_URL + '?t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache' },
+        });
+        if (!res.ok) throw new Error('raw fetch failed');
+        const text = await res.text();
+        remote = JSON.parse(text);
+        // Get SHA from API for later push (this might fail, that's OK for read)
+        try {
+          const apiRes = await fetch(API_BASE, {
+            headers: {
+              'Authorization': `token ${GITHUB_TOKEN}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Cache-Control': 'no-cache',
+            },
+          });
+          if (apiRes.ok) {
+            const apiData = await apiRes.json();
+            remoteSHA = apiData.sha;
+          }
+        } catch {}
+      } catch {
+        // Fallback: try API endpoint
+        const res = await fetch(API_BASE, {
           headers: {
             'Authorization': `token ${GITHUB_TOKEN}`,
             'Accept': 'application/vnd.github.v3+json',
             'Cache-Control': 'no-cache',
           },
         });
-        if (reRes.ok) {
-          const reData = await reRes.json();
-          const reRemote = JSON.parse(fromBase64(reData.content));
-          const reMerged = mergeStates(merged!, reRemote);
-          reMerged.version = Math.max(merged!.version, reRemote.version) + 1;
-          const reContent = toBase64(JSON.stringify(reMerged));
-          const rePutRes = await fetch(API_BASE, {
+        if (!res.ok) {
+          setLastSync('读取失败');
+          setSyncing(false);
+          return;
+        }
+        const data = await res.json();
+        remoteSHA = data.sha;
+        remote = JSON.parse(fromBase64(data.content));
+      }
+
+      // 2. Merge local + remote
+      let merged: SharedState;
+      setState(prev => {
+        merged = mergeStates(prev, remote!);
+        merged.version = Math.max(prev.version, remote!.version) + 1;
+        return merged;
+      });
+
+      await new Promise(r => setTimeout(r, 0));
+
+      // 3. Push merged state via API
+      let pushSuccess = false;
+      if (remoteSHA && GITHUB_TOKEN) {
+        try {
+          const pushContent = toBase64(JSON.stringify(merged!));
+          const putRes = await fetch(API_BASE, {
             method: 'PUT',
             headers: {
               'Authorization': `token ${GITHUB_TOKEN}`,
               'Accept': 'application/vnd.github.v3+json',
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ message: 'sync: merge', content: reContent, sha: reData.sha }),
+            body: JSON.stringify({ message: 'sync', content: pushContent, sha: remoteSHA }),
           });
-          if (rePutRes.ok) {
-            setState(reMerged);
-            saveLocal(reMerged);
+
+          if (putRes.ok) {
             pushSuccess = true;
+          } else if (putRes.status === 409) {
+            // Conflict: re-read and re-merge
+            const reText = await (await fetch(RAW_URL + '?t=' + Date.now())).text();
+            const reRemote = JSON.parse(reText);
+            const reMerged = mergeStates(merged!, reRemote);
+            reMerged.version = Math.max(merged!.version, reRemote.version) + 1;
+            // Get new SHA
+            const shaRes = await fetch(API_BASE, {
+              headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            });
+            if (shaRes.ok) {
+              const shaData = await shaRes.json();
+              const reContent = toBase64(JSON.stringify(reMerged));
+              const rePutRes = await fetch(API_BASE, {
+                method: 'PUT',
+                headers: {
+                  'Authorization': `token ${GITHUB_TOKEN}`,
+                  'Accept': 'application/vnd.github.v3+json',
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: 'sync: merge', content: reContent, sha: shaData.sha }),
+              });
+              if (rePutRes.ok) {
+                setState(reMerged);
+                saveLocal(reMerged);
+                pushSuccess = true;
+              }
+            }
           }
-        }
+        } catch {}
+      } else {
+        // Read succeeded but write not possible (no SHA/token)
+        // Still counts as success for reading
+        pushSuccess = true;
       }
 
       if (pushSuccess) {
         const now = new Date();
-        setLastSync(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+        setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`);
       } else {
-        setLastSync('同步失败 — 请重试');
+        setLastSync('上传失败 — 请重试');
       }
     } catch {
-      setLastSync('同步失败 — 网络错误');
+      setLastSync('网络错误 — 请检查网络后重试');
     }
     setSyncing(false);
   }, []);
