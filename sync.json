@@ -1,1 +1,1 @@
-{"version": 1, "moods": [], "coins": [], "checkins": [], "photos": [], "littleThings": [], "capsules": [], "messages": [], "wheelResults": []}
+{"version": 3, "moods": [{"userId": "user_1", "mood": "happy_test", "updatedAt": 1779820076791}], "coins": [], "checkins": [], "photos": [], "littleThings": [], "capsules": [], "messages": [], "wheelResults": []}
