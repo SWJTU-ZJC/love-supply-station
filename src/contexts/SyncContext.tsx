@@ -156,13 +156,15 @@ function getDefaultLittleThings(): SharedLittleThing[] {
 
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
   const safe = (arr: any[]) => arr || [];
+  const mergeRemoteWins = <T extends { id: string }>(_local: T[], remoteArr: T[]) => {
+    return [...safe(remoteArr)];
+  };
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
     const map = new Map<string, T>();
     safe(a).forEach(x => map.set(x.id, x));
     safe(b).forEach(x => map.set(x.id, x));
     return Array.from(map.values());
   };
-
   const mergeByUserIdLatest = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
     [...safe(a), ...safe(b)].forEach(x => {
@@ -171,7 +173,6 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     });
     return Array.from(map.values());
   };
-
   const mergeCoins = (localCoins: SharedCoin[], remoteCoins: SharedCoin[]) => {
     const map = new Map<string, number>();
     safe(localCoins).forEach(c => map.set(c.userId, c.coins));
@@ -183,10 +184,10 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     version: Math.max(local.version, remote.version),
     moods: mergeByUserIdLatest(local.moods, remote.moods, x => x.updatedAt),
     coins: mergeCoins(local.coins, remote.coins),
-    checkins: mergeById(local.checkins, remote.checkins),
-    photos: mergeById(local.photos, remote.photos),
+    checkins: mergeRemoteWins(local.checkins, remote.checkins),
+    photos: mergeRemoteWins(local.photos, remote.photos),
     littleThings: mergeById(local.littleThings, remote.littleThings),
-    gachaItems: mergeById(local.gachaItems, remote.gachaItems),
+    gachaItems: mergeRemoteWins(local.gachaItems, remote.gachaItems),
   };
 }
 
