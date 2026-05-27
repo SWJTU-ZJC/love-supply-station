@@ -40,7 +40,7 @@ export default function MapPage() {
   const markersRef = useRef<L.Marker[]>([]);
 
   const checkins = state.checkins || [];
-  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 50;
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 5;
 
   const getPos = useCallback(() => {
     setGpsErr('');

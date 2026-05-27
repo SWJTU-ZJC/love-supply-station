@@ -13,8 +13,8 @@ export default function HomePage() {
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
   const partnerMood = state.moods.find(m => m.userId === partner?.id)?.mood || partner?.mood || '😊';
-  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? user?.coins ?? 50;
-  const partnerCoins = state.coins.find(c => c.userId === partner?.id)?.coins ?? partner?.coins ?? 50;
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? user?.coins ?? 5;
+  const partnerCoins = state.coins.find(c => c.userId === partner?.id)?.coins ?? partner?.coins ?? 5;
 
   useEffect(() => {
     const timer = setTimeout(() => {

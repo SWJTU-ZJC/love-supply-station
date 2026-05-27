@@ -15,7 +15,7 @@ export default function LittleThingsPage() {
   const doneCount = things.filter(t => t.isDone).length;
   const progress = things.length > 0 ? Math.round((doneCount / things.length) * 100) : 0;
 
-  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 50;
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 5;
 
   const handleToggle = (id: string) => {
     const thing = things.find(t => t.id === id);

@@ -51,7 +51,7 @@ export default function GachaPage() {
   const scratchCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const cost = 10;
-  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? user?.coins ?? 50;
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? user?.coins ?? 5;
   const myGachaItems = (state.gachaItems || []).filter(i => i.userId === user?.id);
   const unusedItems = myGachaItems.filter(i => !i.used);
   const usedItems = myGachaItems.filter(i => i.used);
