@@ -36,9 +36,12 @@ export interface Checkin {
 
 export interface DailyPhoto {
   id: string;
-  date: string;
   userId: string;
-  imageUrl: string;
+  url: string;
+  createdAt: number;
+  caption: string;
+  date?: string;
+  imageUrl?: string;
 }
 
 export interface Capsule {

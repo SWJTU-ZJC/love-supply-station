@@ -10,7 +10,7 @@ export interface SharedCheckin {
   id: string; userId: string; latitude: number; longitude: number;
   imageUrl: string; note: string; createdAt: string;
 }
-export interface SharedPhoto { id: string; date: string; userId: string; imageUrl: string; }
+export interface SharedPhoto { id: string; userId: string; url: string; createdAt: number; caption: string; }
 export interface SharedLittleThing {
   id: string; text: string; isDone: boolean; doneTime: string | null; proposedBy: string;
 }
@@ -46,6 +46,7 @@ interface SyncContextType {
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
   addPhoto: (p: SharedPhoto) => void;
+  uploadPhoto: (file: File, caption: string) => Promise<boolean>;
   toggleLittleThing: (id: string) => void;
   addLittleThing: (t: Omit<SharedLittleThing, 'id'>) => void;
   addCapsule: (c: Omit<SharedCapsule, 'id'>) => void;
@@ -72,8 +73,14 @@ const SK = String.fromCharCode.apply(null, _sk);
 
 // ========== OSS HMAC-SHA1 signature ==========
 
-async function ossSign(verb: string, contentType: string, expires: number, resource: string): Promise<string> {
-  const stringToSign = `${verb}\n\n${contentType}\n${expires}\n${resource}`;
+async function ossSign(verb: string, contentType: string, expires: number, resource: string, ossHeaders?: Record<string, string>): Promise<string> {
+  let canonicalHeaders = '';
+  if (ossHeaders) {
+    Object.keys(ossHeaders).sort().forEach(k => {
+      canonicalHeaders += `${k}:${ossHeaders[k]}\n`;
+    });
+  }
+  const stringToSign = `${verb}\n\n${contentType}\n${expires}\n${canonicalHeaders}${resource}`;
   const encoder = new TextEncoder();
   const keyData = encoder.encode(SK);
   const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
@@ -86,6 +93,30 @@ async function ossSign(verb: string, contentType: string, expires: number, resou
 
 function buildOssUrl(sig: string, expires: number): string {
   return `https://${OSS_ENDPOINT}/${OSS_KEY}?OSSAccessKeyId=${encodeURIComponent(AK)}&Expires=${expires}&Signature=${encodeURIComponent(sig)}`;
+}
+
+function buildPhotoOssUrl(objectKey: string, sig: string, expires: number): string {
+  return `https://${OSS_ENDPOINT}/${objectKey}?OSSAccessKeyId=${encodeURIComponent(AK)}&Expires=${expires}&Signature=${encodeURIComponent(sig)}`;
+}
+
+// ========== Image compression ==========
+
+function compressImage(file: File, maxW: number = 1920, quality: number = 0.8): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas unavailable')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', quality);
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = URL.createObjectURL(file);
+  });
 }
 
 interface CachedUrl { url: string; expiresAt: number; }
@@ -192,7 +223,6 @@ function slimForSync(state: SharedState): SharedState {
   return {
     ...state,
     checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })),
-    photos: [],
   };
 }
 
@@ -497,11 +527,49 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [updateLocal]);
 
   const addPhoto = useCallback((p: SharedPhoto) => {
-    updateLocal(prev => ({
-      ...prev,
-      photos: [...prev.photos.filter(x => !(x.date === p.date && x.userId === p.userId)), p],
-    }));
+    updateLocal(prev => ({ ...prev, photos: [...prev.photos, p] }));
   }, [updateLocal]);
+
+  const uploadPhoto = useCallback(async (file: File, caption: string): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const blob = await compressImage(file);
+      const ts = Date.now();
+      const rand = Math.random().toString(36).slice(2, 6);
+      const objectKey = `photos/${user.id}/${ts}_${rand}.jpg`;
+      const bucket = OSS_ENDPOINT.split('.')[0];
+      const resource = `/${bucket}/${objectKey}`;
+      const expires = Math.floor(Date.now() / 1000) + 300;
+      const ossHeaders = { 'x-oss-object-acl': 'public-read' };
+      const sig = await ossSign('PUT', 'image/jpeg', expires, resource, ossHeaders);
+      const url = buildPhotoOssUrl(objectKey, sig, expires);
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg', 'x-oss-object-acl': 'public-read' },
+        body: blob,
+      });
+      if (!res.ok) {
+        console.error(`[sync:${user.id}] Photo upload HTTP ${res.status}`);
+        return false;
+      }
+
+      const photoUrl = `https://${OSS_ENDPOINT}/${objectKey}`;
+      const photo: SharedPhoto = {
+        id: ts.toString() + rand,
+        userId: user.id,
+        url: photoUrl,
+        createdAt: ts,
+        caption,
+      };
+      addPhoto(photo);
+      console.log(`[sync:${user.id}] Photo uploaded: ${photoUrl}`);
+      return true;
+    } catch (e) {
+      console.error(`[sync:${user.id}] Photo upload error:`, e);
+      return false;
+    }
+  }, [user, addPhoto]);
 
   const toggleLittleThing = useCallback((id: string) => {
     updateLocal(prev => ({
@@ -561,7 +629,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
       exportSyncCode, importSyncCode,
-      updateMood, updateCoins, addCheckin, addPhoto,
+      updateMood, updateCoins, addCheckin, addPhoto, uploadPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
       sendMessage, markMessageRead, addWheelResult,
     }}>
