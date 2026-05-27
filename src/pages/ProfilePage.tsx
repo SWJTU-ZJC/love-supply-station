@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const { user, partner, logout } = useAuth();
   const { state, connected, lastSync, updateCoins } = useSync();
 
@@ -105,15 +107,10 @@ export default function ProfilePage() {
       </div>
 
       <div className="bg-white rounded-card shadow-soft overflow-hidden">
-        <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-apricot/30 transition-colors border-b border-apricot/30">
-          <span className="text-xl">🎨</span>
-          <span className="text-text-primary text-sm">更换主题配色</span>
-        </button>
-        <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-apricot/30 transition-colors border-b border-apricot/30">
-          <span className="text-xl">🔔</span>
-          <span className="text-text-primary text-sm">通知设置</span>
-        </button>
-        <button className="w-full flex items-center gap-3 px-5 py-4 hover:bg-apricot/30 transition-colors border-b border-apricot/30">
+        <button
+          onClick={() => navigate('/about')}
+          className="w-full flex items-center gap-3 px-5 py-4 hover:bg-apricot/30 transition-colors border-b border-apricot/30"
+        >
           <span className="text-xl">💬</span>
           <span className="text-text-primary text-sm">关于恋爱补给站</span>
         </button>

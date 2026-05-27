@@ -7,6 +7,7 @@ import ProfilePage from './pages/ProfilePage';
 import GachaPage from './pages/GachaPage';
 import LittleThingsPage from './pages/LittleThingsPage';
 import MoviePage from './pages/MoviePage';
+import AboutPage from './pages/AboutPage';
 import MainLayout from './components/MainLayout';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/gacha" element={<AuthGuard><GachaPage /></AuthGuard>} />
         <Route path="/little-things" element={<AuthGuard><LittleThingsPage /></AuthGuard>} />
         <Route path="/movie" element={<AuthGuard><MoviePage /></AuthGuard>} />
+        <Route path="/about" element={<AuthGuard><AboutPage /></AuthGuard>} />
       </Routes>
     </div>
   );
