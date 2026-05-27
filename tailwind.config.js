@@ -21,13 +21,13 @@ export default {
         body: ['Nunito', '"PingFang SC"', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
-        'card': '24px',
-        'sm-card': '16px',
-        'btn': '12px',
+        'card': 'var(--radius-card)',
+        'sm-card': 'var(--radius-sm-card)',
+        'btn': 'var(--radius-btn)',
       },
       boxShadow: {
-        'soft': '0 4px 20px var(--shadow-soft)',
-        'soft-lg': '0 8px 30px var(--shadow-lg)',
+        'soft': 'var(--shadow-card)',
+        'soft-lg': 'var(--shadow-card-lg)',
       },
       maxWidth: {
         'app': '480px',

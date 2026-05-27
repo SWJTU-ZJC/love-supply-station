@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
-import { useTheme, themeLabels, themeColors, type Theme } from '../contexts/ThemeContext';
+import { useTheme, themeLabels, themeColors, uiModeLabels, type Theme, type UIMode } from '../contexts/ThemeContext';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, partner, logout } = useAuth();
   const { state, connected, lastSync, updateCoins } = useSync();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, uiMode, setUIMode } = useTheme();
   const tc = themeColors[theme];
 
   if (!user || !partner) return null;
@@ -145,6 +145,30 @@ export default function ProfilePage() {
                 </button>
               );
             })}
+          </div>
+        </div>
+
+        {/* UI Mode Switcher */}
+        <div className="px-5 py-4 border-b border-apricot/30">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-xl">🎭</span>
+            <span className="text-text-primary text-sm">界面风格</span>
+            <span className="text-text-secondary text-xs ml-auto">{uiModeLabels[uiMode]}</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {(Object.keys(uiModeLabels) as UIMode[]).map(m => (
+              <button
+                key={m}
+                onClick={() => setUIMode(m)}
+                className={`flex flex-col items-center gap-1 py-2 rounded-xl text-xs transition-all
+                  ${uiMode === m ? 'bg-apricot ring-2 ring-blush/40' : 'hover:bg-apricot/30 text-text-secondary'}`}
+              >
+                <span className="text-lg">
+                  {m === 'default' ? '📐' : m === 'glass' ? '🫧' : m === 'editorial' ? '📰' : m === 'playful' ? '🎈' : '🍂'}
+                </span>
+                <span className={uiMode === m ? 'text-text-primary font-semibold' : ''}>{uiModeLabels[m]}</span>
+              </button>
+            ))}
           </div>
         </div>
 

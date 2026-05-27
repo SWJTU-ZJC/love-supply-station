@@ -1,12 +1,21 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 
 export type Theme = 'default' | 'latte' | 'lavender' | 'olive';
+export type UIMode = 'default' | 'glass' | 'editorial' | 'playful' | 'wabi';
 
 export const themeLabels: Record<Theme, string> = {
   default: '恋爱粉',
   latte: '焦糖拿铁',
   lavender: '雾紫灰调',
   olive: '橄榄暖灰',
+};
+
+export const uiModeLabels: Record<UIMode, string> = {
+  default: '经典',
+  glass: '毛玻璃',
+  editorial: '杂志风',
+  playful: '玩趣风',
+  wabi: '侘寂风',
 };
 
 export const themeColors: Record<Theme, { primary: string; accent: string; blue: string; green: string }> = {
@@ -19,9 +28,11 @@ export const themeColors: Record<Theme, { primary: string; accent: string; blue:
 interface ThemeContextType {
   theme: Theme;
   setTheme: (t: Theme) => void;
+  uiMode: UIMode;
+  setUIMode: (m: UIMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ theme: 'default', setTheme: () => {} });
+const ThemeContext = createContext<ThemeContextType>({ theme: 'default', setTheme: () => {}, uiMode: 'default', setUIMode: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -34,17 +45,36 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'default';
   });
 
+  const [uiMode, setUIModeState] = useState<UIMode>(() => {
+    try {
+      const stored = localStorage.getItem('love-ui');
+      if (stored && ['default', 'glass', 'editorial', 'playful', 'wabi'].includes(stored)) {
+        return stored as UIMode;
+      }
+    } catch {}
+    return 'default';
+  });
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('love-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-ui', uiMode);
+    localStorage.setItem('love-ui', uiMode);
+  }, [uiMode]);
+
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t);
   }, []);
 
+  const setUIMode = useCallback((m: UIMode) => {
+    setUIModeState(m);
+  }, []);
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme, uiMode, setUIMode }}>
       {children}
     </ThemeContext.Provider>
   );
