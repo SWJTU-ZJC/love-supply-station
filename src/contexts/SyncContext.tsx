@@ -73,14 +73,8 @@ const SK = String.fromCharCode.apply(null, _sk);
 
 // ========== OSS HMAC-SHA1 signature ==========
 
-async function ossSign(verb: string, contentType: string, expires: number, resource: string, ossHeaders?: Record<string, string>): Promise<string> {
-  let canonicalHeaders = '';
-  if (ossHeaders) {
-    Object.keys(ossHeaders).sort().forEach(k => {
-      canonicalHeaders += `${k}:${ossHeaders[k]}\n`;
-    });
-  }
-  const stringToSign = `${verb}\n\n${contentType}\n${expires}\n${canonicalHeaders}${resource}`;
+async function ossSign(verb: string, contentType: string, expires: number, resource: string): Promise<string> {
+  const stringToSign = `${verb}\n\n${contentType}\n${expires}\n${resource}`;
   const encoder = new TextEncoder();
   const keyData = encoder.encode(SK);
   const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
@@ -539,14 +533,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const objectKey = `photos/${user.id}/${ts}_${rand}.jpg`;
       const bucket = OSS_ENDPOINT.split('.')[0];
       const resource = `/${bucket}/${objectKey}`;
+
       const expires = Math.floor(Date.now() / 1000) + 300;
-      const ossHeaders = { 'x-oss-object-acl': 'public-read' };
-      const sig = await ossSign('PUT', 'image/jpeg', expires, resource, ossHeaders);
+      const sig = await ossSign('PUT', 'image/jpeg', expires, resource);
       const url = buildPhotoOssUrl(objectKey, sig, expires);
 
       const res = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg', 'x-oss-object-acl': 'public-read' },
+        headers: { 'Content-Type': 'image/jpeg' },
         body: blob,
       });
       if (!res.ok) {
@@ -554,7 +548,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const photoUrl = `https://${OSS_ENDPOINT}/${objectKey}`;
+      const viewExpires = Math.floor(Date.now() / 1000) + 31536000;
+      const viewSig = await ossSign('GET', '', viewExpires, resource);
+      const photoUrl = buildPhotoOssUrl(objectKey, viewSig, viewExpires);
       const photo: SharedPhoto = {
         id: ts.toString() + rand,
         userId: user.id,
