@@ -472,14 +472,21 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         createdAt: ts,
         caption,
       };
-      addPhoto(photo);
-      console.log(`[sync:${user.id}] Photo saved: ${photo.id} (${(dataUrl.length / 1024).toFixed(0)}KB)`);
+      updateLocal(prev => {
+        const currentCoins = prev.coins.find(c => c.userId === user.id)?.coins ?? 0;
+        return {
+          ...prev,
+          photos: [...prev.photos, photo],
+          coins: [...prev.coins.filter(c => c.userId !== user.id), { userId: user.id, coins: currentCoins + 1 }],
+        };
+      });
+      console.log(`[sync:${user.id}] Photo saved: ${photo.id} (${(dataUrl.length / 1024).toFixed(0)}KB) +1 coin`);
       return true;
     } catch (e) {
       console.error(`[sync:${user.id}] Photo error:`, e);
       return false;
     }
-  }, [user, addPhoto]);
+  }, [user, updateLocal]);
 
   const toggleLittleThing = useCallback((id: string) => {
     updateLocal(prev => ({

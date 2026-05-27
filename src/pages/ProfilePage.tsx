@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
   const { user, partner, logout } = useAuth();
-  const { state, connected, lastSync } = useSync();
+  const { state, connected, lastSync, updateCoins } = useSync();
 
   if (!user || !partner) return null;
 
@@ -13,18 +14,22 @@ export default function ProfilePage() {
   const partnerMood = state.moods.find(m => m.userId === partner.id)?.mood || partner.mood;
 
   const checkinCount = state.checkins?.filter(c => c.userId === user.id).length || 0;
+  const photoCount = state.photos?.filter(p => p.userId === user.id).length || 0;
   const doneCount = state.littleThings?.filter(t => t.isDone).length || 0;
   const msgCount = state.messages?.filter(m => m.fromUserId === user.id).length || 0;
 
-  const dailyLogin = () => {
-    const lastClaim = localStorage.getItem('daily-coin-claimed');
-    const today = new Date().toISOString().split('T')[0];
-    if (lastClaim === today) return;
+  const today = new Date().toISOString().split('T')[0];
+  const [claimedToday, setClaimedToday] = useState(
+    () => localStorage.getItem('daily-coin-claimed') === today
+  );
+
+  const handleDailyLogin = () => {
+    if (claimedToday) return;
     localStorage.setItem('daily-coin-claimed', today);
+    setClaimedToday(true);
+    updateCoins(myCoins + 2);
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 }, colors: ['#FFC3A0', '#FFB3B3'] });
   };
-
-  dailyLogin();
 
   return (
     <div className="page-enter px-5 pt-8 pb-4 space-y-6">
@@ -55,14 +60,26 @@ export default function ProfilePage() {
               <p className="text-text-secondary text-xs">金币余额</p>
             </div>
           </div>
-          <button onClick={dailyLogin}
-            className="px-4 py-2 rounded-btn bg-sunset/10 text-sunset text-sm font-semibold hover:bg-sunset/20 transition-colors">
-            每日签到 +5
+          <button
+            onClick={handleDailyLogin}
+            disabled={claimedToday}
+            className={`px-4 py-2 rounded-btn text-sm font-semibold transition-colors ${
+              claimedToday
+                ? 'bg-gray-100 text-text-secondary cursor-not-allowed'
+                : 'bg-sunset/10 text-sunset hover:bg-sunset/20'
+            }`}
+          >
+            {claimedToday ? '今日已签到' : '每日签到 +2'}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-card p-4 shadow-soft text-center">
+          <div className="text-3xl mb-1">🎬</div>
+          <p className="text-xl font-bold text-blush">{photoCount}</p>
+          <p className="text-text-secondary text-xs">上传照片</p>
+        </div>
         <div className="bg-white rounded-card p-4 shadow-soft text-center">
           <div className="text-3xl mb-1">💌</div>
           <p className="text-xl font-bold text-sunset">{msgCount}</p>
