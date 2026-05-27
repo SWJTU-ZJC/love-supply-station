@@ -167,7 +167,8 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   };
   const mergeByUserIdLatest = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
-    [...safe(a), ...safe(b)].forEach(x => {
+    safe(b).forEach(x => map.set(x.userId, x));
+    safe(a).forEach(x => {
       const existing = map.get(x.userId);
       if (!existing || getTime(x) > getTime(existing)) map.set(x.userId, x);
     });
