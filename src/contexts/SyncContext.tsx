@@ -147,11 +147,20 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     return Array.from(map.values());
   };
 
-  const mergeByUserId = <T extends { userId: string }>(a: T[], b: T[], key: string) => {
+  const mergeByUserId = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
-    a.forEach(x => map.set(`${x.userId}-${(x as any)[key] || ''}`, x));
-    b.forEach(x => map.set(`${x.userId}-${(x as any)[key] || ''}`, x));
+    [...a, ...b].forEach(x => {
+      const existing = map.get(x.userId);
+      if (!existing || getTime(x) > getTime(existing)) map.set(x.userId, x);
+    });
     return Array.from(map.values());
+  };
+
+  const mergeCoins = (local: SharedCoin[], remote: SharedCoin[]) => {
+    const map = new Map<string, number>();
+    local.forEach(c => map.set(c.userId, c.coins));
+    remote.forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
+    return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
   const mergeWheel = (a: SharedState['wheelResults'], b: SharedState['wheelResults']) => {
@@ -166,8 +175,8 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 
   return {
     version: Math.max(local.version, remote.version),
-    moods: mergeByUserId(local.moods, remote.moods, 'updatedAt'),
-    coins: mergeByUserId(local.coins, remote.coins, ''),
+    moods: mergeByUserId(local.moods, remote.moods, x => (x as SharedMood).updatedAt),
+    coins: mergeCoins(local.coins, remote.coins),
     checkins: mergeById(local.checkins, remote.checkins),
     photos: mergeById(local.photos, remote.photos),
     littleThings: mergeById(local.littleThings, remote.littleThings),
