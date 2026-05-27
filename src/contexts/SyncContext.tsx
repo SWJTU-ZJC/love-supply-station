@@ -147,7 +147,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     return Array.from(map.values());
   };
 
-  const mergeByUserId = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
+  const mergeByUserIdLatest = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
     [...a, ...b].forEach(x => {
       const existing = map.get(x.userId);
@@ -156,10 +156,10 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     return Array.from(map.values());
   };
 
-  const mergeCoins = (local: SharedCoin[], remote: SharedCoin[]) => {
+  const mergeCoins = (localCoins: SharedCoin[], remoteCoins: SharedCoin[]) => {
     const map = new Map<string, number>();
-    local.forEach(c => map.set(c.userId, c.coins));
-    remote.forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
+    localCoins.forEach(c => map.set(c.userId, c.coins));
+    remoteCoins.forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
     return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
@@ -175,7 +175,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 
   return {
     version: Math.max(local.version, remote.version),
-    moods: mergeByUserId(local.moods, remote.moods, x => (x as SharedMood).updatedAt),
+    moods: mergeByUserIdLatest(local.moods, remote.moods, x => x.updatedAt),
     coins: mergeCoins(local.coins, remote.coins),
     checkins: mergeById(local.checkins, remote.checkins),
     photos: mergeById(local.photos, remote.photos),
@@ -246,6 +246,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  const uid = user?.id || '?';
+
   // ========== OSS: get signed URL for GET ==========
 
   async function getGetUrl(): Promise<string> {
@@ -253,7 +255,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (getUrlRef.current && getUrlRef.current.expiresAt > now + 60) {
       return getUrlRef.current.url;
     }
-    const expires = now + 3600; // 1 hour
+    const expires = now + 3600;
     const sig = await ossSign('GET', '', expires, `/${OSS_ENDPOINT.split('.')[0]}/${OSS_KEY}`);
     const url = buildOssUrl(sig, expires);
     getUrlRef.current = { url, expiresAt: expires };
@@ -262,7 +264,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // ========== OSS: fetch remote ==========
 
-  // Returns: { state, etag } on new data, 'unchanged' on 304, 'empty' on 404, null on error
   type FetchResult = { state: SharedState; etag: string } | 'unchanged' | 'empty' | 'error';
 
   const fetchRemote = useCallback(async (): Promise<FetchResult> => {
@@ -275,7 +276,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (res.status === 304) return 'unchanged';
       if (res.status === 404) return 'empty';
       if (!res.ok) {
-        console.error(`OSS GET failed: HTTP ${res.status}`);
+        console.error(`[sync:${uid}] OSS GET HTTP ${res.status}`);
         return 'error';
       }
 
@@ -283,23 +284,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (!text) return 'empty';
       const remote = JSON.parse(text);
       if (typeof remote.version !== 'number' || !Array.isArray(remote.moods)) {
-        console.error('OSS GET: invalid data format');
+        console.error(`[sync:${uid}] OSS GET: invalid data`);
         return 'error';
       }
 
       const etag = res.headers.get('ETag') || '';
+      console.log(`[sync:${uid}] GET ok v${remote.version} moods:${remote.moods?.length || 0}`);
       return { state: remote as SharedState, etag };
     } catch (e) {
-      console.error('OSS GET error:', e);
+      console.error(`[sync:${uid}] OSS GET error:`, e);
       return 'error';
     }
-  }, []);
+  }, [uid]);
 
   // ========== OSS: push local ==========
 
   const pushRemote = useCallback(async (localState: SharedState, etag: string): Promise<string | null> => {
     try {
-      const expires = Math.floor(Date.now() / 1000) + 300; // 5 min
+      const expires = Math.floor(Date.now() / 1000) + 300;
       const sig = await ossSign('PUT', 'application/json', expires, `/${OSS_ENDPOINT.split('.')[0]}/${OSS_KEY}`);
       const url = buildOssUrl(sig, expires);
 
@@ -308,19 +310,25 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (etag) headers['If-Match'] = etag;
 
+      console.log(`[sync:${uid}] PUT v${localState.version} moods:${localState.moods?.length || 0} etag:${etag || '(new)'}`);
       const res = await fetch(url, { method: 'PUT', headers, body });
-      if (res.status === 412) return null; // conflict — someone else wrote
+      if (res.status === 412) {
+        console.warn(`[sync:${uid}] PUT 412 conflict`);
+        return null;
+      }
       if (!res.ok) {
-        console.error(`OSS PUT failed: HTTP ${res.status}`);
+        console.error(`[sync:${uid}] OSS PUT HTTP ${res.status}`);
         return null;
       }
 
-      return res.headers.get('ETag') || '';
+      const newEtag = res.headers.get('ETag') || '';
+      console.log(`[sync:${uid}] PUT ok newEtag:${newEtag}`);
+      return newEtag;
     } catch (e) {
-      console.error('OSS PUT error:', e);
+      console.error(`[sync:${uid}] OSS PUT error:`, e);
       return null;
     }
-  }, []);
+  }, [uid]);
 
   // ========== Polling loop ==========
 
@@ -338,9 +346,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
       if (result === 'empty') {
         setConnected(true);
-        // File doesn't exist yet — create it with current local state
         if (!initDoneRef.current) {
           initDoneRef.current = true;
+          console.log(`[sync:${uid}] File empty, creating...`);
           const current = stateRef.current;
           const newEtag = await pushRemote(current, '');
           if (newEtag) {
@@ -367,6 +375,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         const merged = mergeStates(prev, remote);
         merged.version = Math.max(prev.version, remote.version) + 1;
         saveLocal(merged);
+        console.log(`[sync:${uid}] MERGED local v${prev.version} + remote v${remote.version} → v${merged.version}`);
         return merged;
       });
 
@@ -374,15 +383,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     };
 
-    // Initial fetch
     poll();
-
     pollTimerRef.current = setInterval(poll, POLL_MS);
     return () => {
       mounted = false;
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [fetchRemote, pushRemote]);
+  }, [fetchRemote, pushRemote, uid]);
 
   // ========== Push on local changes (debounced) ==========
 
@@ -398,11 +405,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const current = stateRef.current;
       const etag = etagRef.current || '';
 
-      // Try push
       let newEtag = await pushRemote(current, etag);
 
       if (!newEtag && etag) {
-        // Conflict (412) — re-fetch, merge, retry
         const result = await fetchRemote();
         if (result && typeof result === 'object') {
           etagRef.current = result.etag;
@@ -412,6 +417,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           if (newEtag) {
             setState(merged);
             saveLocal(merged);
+            console.log(`[sync:${uid}] Conflict resolved, retry ok`);
           }
         }
       }
@@ -425,9 +431,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       pushingRef.current = false;
       setSyncing(false);
     }, PUSH_DEBOUNCE_MS);
-  }, [fetchRemote, pushRemote]);
+  }, [fetchRemote, pushRemote, uid]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => { if (pushTimerRef.current) clearTimeout(pushTimerRef.current); };
   }, []);
@@ -439,10 +444,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const next = updater(prev);
       next.version = prev.version + 1;
       saveLocal(next);
+      console.log(`[sync:${uid}] local change → v${next.version}`);
       return next;
     });
     schedulePush();
-  }, [schedulePush]);
+  }, [schedulePush, uid]);
 
   // ========== Sync code (fallback) ==========
 
@@ -456,14 +462,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const importSyncCode = useCallback((code: string): boolean => {
     const remote = decodeState(code.trim());
     if (!remote) return false;
-
     setState(prev => {
       const merged = mergeStates(prev, remote);
       merged.version = Math.max(prev.version, remote.version) + 1;
       saveLocal(merged);
       return merged;
     });
-
     const now = new Date();
     setLastSync(`导入 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
     return true;
