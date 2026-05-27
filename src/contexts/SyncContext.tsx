@@ -41,6 +41,7 @@ interface SyncContextType {
   updateMood: (mood: string) => void;
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
+  deleteCheckin: (id: string) => void;
   addPhoto: (p: SharedPhoto) => void;
   deletePhoto: (id: string) => void;
   uploadPhoto: (file: File, caption: string) => Promise<boolean>;
@@ -456,6 +457,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     updateLocal(prev => ({ ...prev, checkins: [...prev.checkins, checkin] }));
   }, [updateLocal]);
 
+  const deleteCheckin = useCallback((id: string) => {
+    updateLocal(prev => ({ ...prev, checkins: prev.checkins.filter(c => c.id !== id) }));
+  }, [updateLocal]);
+
   const addPhoto = useCallback((p: SharedPhoto) => {
     updateLocal(prev => ({ ...prev, photos: [...prev.photos, p] }));
   }, [updateLocal]);
@@ -531,7 +536,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   return (
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
-      updateMood, updateCoins, addCheckin, addPhoto, deletePhoto, uploadPhoto,
+      updateMood, updateCoins, addCheckin, deleteCheckin, addPhoto, deletePhoto, uploadPhoto,
       toggleLittleThing, addLittleThing,
       addGachaItem, useGachaItem,
     }}>

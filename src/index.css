@@ -106,6 +106,22 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Location dot pulse */
+@keyframes locationPulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  70% { box-shadow: 0 0 0 18px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+.location-dot-marker {
+  width: 20px;
+  height: 20px;
+  background: #3B82F6;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  animation: locationPulse 2s ease-out infinite;
+}
+
 /* Leaflet overrides */
 .leaflet-container {
   border-radius: 16px;

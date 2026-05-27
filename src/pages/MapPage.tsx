@@ -24,7 +24,7 @@ function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.7
 
 export default function MapPage() {
   const { user, partner } = useAuth();
-  const { state, addCheckin, updateCoins } = useSync();
+  const { state, addCheckin, deleteCheckin, updateCoins } = useSync();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +38,7 @@ export default function MapPage() {
   const [gpsPos, setGpsPos] = useState<{ lat: number; lng: number } | null>(null);
   const [gpsErr, setGpsErr] = useState('');
   const markersRef = useRef<L.Marker[]>([]);
+  const locationMarkerRef = useRef<L.Marker | null>(null);
 
   const checkins = state.checkins || [];
   const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 5;
@@ -94,6 +95,36 @@ export default function MapPage() {
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, [viewMode, checkins, gpsPos]);
+
+  // Current location marker (independent of checkin markers)
+  useEffect(() => {
+    if (viewMode !== 'map' || !mapRef.current) {
+      if (locationMarkerRef.current) {
+        locationMarkerRef.current.remove();
+        locationMarkerRef.current = null;
+      }
+      return;
+    }
+    if (!gpsPos) {
+      if (locationMarkerRef.current) {
+        locationMarkerRef.current.remove();
+        locationMarkerRef.current = null;
+      }
+      return;
+    }
+    if (locationMarkerRef.current) {
+      locationMarkerRef.current.setLatLng([gpsPos.lat, gpsPos.lng]);
+    } else {
+      const icon = L.divIcon({
+        html: '<div class="location-dot-marker"></div>',
+        className: 'location-marker-container',
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+      locationMarkerRef.current = L.marker([gpsPos.lat, gpsPos.lng], { icon, zIndexOffset: 1000 })
+        .addTo(mapRef.current);
+    }
+  }, [gpsPos, viewMode]);
 
   const addMarker = (map: L.Map, checkin: any) => {
     const isMine = checkin.userId === user?.id;
@@ -207,7 +238,17 @@ export default function MapPage() {
         <div className="px-4 py-4 space-y-3 overflow-y-auto h-full">
           <h2 className="font-title text-2xl text-text-primary mb-4">📸 我们的足迹</h2>
           {[...checkins].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(c => (
-            <div key={c.id} className="bg-white rounded-card p-4 shadow-soft">
+            <div key={c.id} className="bg-white rounded-card p-4 shadow-soft relative group">
+              {c.userId === user?.id && (
+                <button
+                  onClick={() => { if (confirm('确定要删除这条打卡记录吗？')) deleteCheckin(c.id); }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/10 text-text-secondary
+                           flex items-center justify-center text-xs opacity-0 group-hover:opacity-100
+                           hover:bg-red-500 hover:text-white transition-all z-10"
+                >
+                  ✕
+                </button>
+              )}
               <div className="flex items-start gap-3">
                 {c.imageUrl ? (
                   <img src={c.imageUrl} alt="" className="w-20 h-20 rounded-xl object-cover" />
