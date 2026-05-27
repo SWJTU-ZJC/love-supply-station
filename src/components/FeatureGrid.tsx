@@ -25,14 +25,6 @@ const features = [
     gradient: 'from-mint/40 to-blush/20',
     emoji: '✅',
   },
-  {
-    title: '时光胶囊',
-    icon: '💊',
-    desc: '写给未来的我们',
-    path: '/capsules',
-    gradient: 'from-blush/20 to-calm/20',
-    emoji: '⏳',
-  },
 ];
 
 export default function FeatureGrid() {

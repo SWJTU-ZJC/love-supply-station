@@ -13,10 +13,6 @@ export interface SharedPhoto { id: string; userId: string; url: string; createdA
 export interface SharedLittleThing {
   id: string; text: string; isDone: boolean; doneTime: string | null; proposedBy: string;
 }
-export interface SharedCapsule {
-  id: string; userId: string; content: string; sealTime: string;
-  openTime: string; isOpened: boolean;
-}
 export interface SharedGachaItem {
   id: string;
   userId: string;
@@ -34,7 +30,6 @@ export interface SharedState {
   checkins: SharedCheckin[];
   photos: SharedPhoto[];
   littleThings: SharedLittleThing[];
-  capsules: SharedCapsule[];
   gachaItems: SharedGachaItem[];
 }
 
@@ -51,8 +46,6 @@ interface SyncContextType {
   uploadPhoto: (file: File, caption: string) => Promise<boolean>;
   toggleLittleThing: (id: string) => void;
   addLittleThing: (t: Omit<SharedLittleThing, 'id'>) => void;
-  addCapsule: (c: Omit<SharedCapsule, 'id'>) => void;
-  openCapsule: (id: string) => void;
   addGachaItem: (item: Omit<SharedGachaItem, 'id' | 'userId' | 'obtainedAt' | 'used'>) => void;
   useGachaItem: (id: string) => void;
 }
@@ -140,7 +133,7 @@ function getEmptyState(): SharedState {
   return {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
-    littleThings: [], capsules: [], gachaItems: [],
+    littleThings: [], gachaItems: [],
   };
 }
 
@@ -193,7 +186,6 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     checkins: mergeById(local.checkins, remote.checkins),
     photos: mergeById(local.photos, remote.photos),
     littleThings: mergeById(local.littleThings, remote.littleThings),
-    capsules: mergeById(local.capsules, remote.capsules),
     gachaItems: mergeById(local.gachaItems, remote.gachaItems),
   };
 }
@@ -509,18 +501,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     updateLocal(prev => ({ ...prev, littleThings: [...prev.littleThings, thing] }));
   }, [updateLocal]);
 
-  const addCapsule = useCallback((c: Omit<SharedCapsule, 'id'>) => {
-    const capsule: SharedCapsule = { ...c, id: Date.now().toString() };
-    updateLocal(prev => ({ ...prev, capsules: [...prev.capsules, capsule] }));
-  }, [updateLocal]);
-
-  const openCapsule = useCallback((id: string) => {
-    updateLocal(prev => ({
-      ...prev,
-      capsules: prev.capsules.map(c => c.id === id ? { ...c, isOpened: true } : c),
-    }));
-  }, [updateLocal]);
-
   const addGachaItem = useCallback((item: Omit<SharedGachaItem, 'id' | 'userId' | 'obtainedAt' | 'used'>) => {
     if (!user) return;
     const gachaItem: SharedGachaItem = {
@@ -546,7 +526,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
       updateMood, updateCoins, addCheckin, addPhoto, deletePhoto, uploadPhoto,
-      toggleLittleThing, addLittleThing, addCapsule, openCapsule,
+      toggleLittleThing, addLittleThing,
       addGachaItem, useGachaItem,
     }}>
       {children}

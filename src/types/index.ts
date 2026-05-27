@@ -37,17 +37,6 @@ export interface DailyPhoto {
   imageUrl?: string;
 }
 
-export interface Capsule {
-  id: string;
-  userId: string;
-  contentType: 'text' | 'audio' | 'video';
-  content: string;
-  mediaUrl: string;
-  sealTime: number;
-  openTime: number;
-  isOpened: boolean;
-}
-
 export interface LittleThing {
   id: string;
   text: string;
