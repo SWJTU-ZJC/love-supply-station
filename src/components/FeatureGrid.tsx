@@ -18,14 +18,6 @@ const features = [
     emoji: '📍',
   },
   {
-    title: '悄悄话树洞',
-    icon: '🌳',
-    desc: '阅后即焚的心里话',
-    path: '/treehole',
-    gradient: 'from-purple-200/30 to-calm/30',
-    emoji: '💌',
-  },
-  {
     title: '100件小事',
     icon: '📝',
     desc: '一起完成的浪漫清单',

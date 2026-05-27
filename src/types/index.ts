@@ -56,14 +56,5 @@ export interface LittleThing {
   proposedBy: string;
 }
 
-export interface TreeHoleMessage {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  content: string;
-  isRead: boolean;
-  createdAt: number;
-}
-
 export type Mood = '😊' | '🥺' | '😤' | '😴' | '🥰';
 export type Identity = 'me' | 'partner';

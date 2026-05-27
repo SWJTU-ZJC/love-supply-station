@@ -16,7 +16,6 @@ export default function ProfilePage() {
   const checkinCount = state.checkins?.filter(c => c.userId === user.id).length || 0;
   const photoCount = state.photos?.filter(p => p.userId === user.id).length || 0;
   const doneCount = state.littleThings?.filter(t => t.isDone).length || 0;
-  const msgCount = state.messages?.filter(m => m.fromUserId === user.id).length || 0;
 
   const today = new Date().toISOString().split('T')[0];
   const [claimedToday, setClaimedToday] = useState(
@@ -79,11 +78,6 @@ export default function ProfilePage() {
           <div className="text-3xl mb-1">🎬</div>
           <p className="text-xl font-bold text-blush">{photoCount}</p>
           <p className="text-text-secondary text-xs">上传照片</p>
-        </div>
-        <div className="bg-white rounded-card p-4 shadow-soft text-center">
-          <div className="text-3xl mb-1">💌</div>
-          <p className="text-xl font-bold text-sunset">{msgCount}</p>
-          <p className="text-text-secondary text-xs">悄悄话</p>
         </div>
         <div className="bg-white rounded-card p-4 shadow-soft text-center">
           <div className="text-3xl mb-1">📍</div>

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 const tabs = [
   { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒' },
   { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️' },
-  { path: '/treehole', label: '树洞', icon: '💌', activeIcon: '🕊️' },
   { path: '/profile', label: '我的', icon: '💝', activeIcon: '❤️' },
 ];
 

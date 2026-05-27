@@ -3,7 +3,6 @@ import AuthGuard from './components/AuthGuard';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
-import TreeHolePage from './pages/TreeHolePage';
 import ProfilePage from './pages/ProfilePage';
 import GachaPage from './pages/GachaPage';
 import LittleThingsPage from './pages/LittleThingsPage';
@@ -20,7 +19,6 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="home" element={<HomePage />} />
           <Route path="map" element={<MapPage />} />
-          <Route path="treehole" element={<TreeHolePage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="/gacha" element={<AuthGuard><GachaPage /></AuthGuard>} />

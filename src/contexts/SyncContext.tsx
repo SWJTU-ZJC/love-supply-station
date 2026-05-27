@@ -17,10 +17,6 @@ export interface SharedCapsule {
   id: string; userId: string; content: string; sealTime: string;
   openTime: string; isOpened: boolean;
 }
-export interface SharedMessage {
-  id: string; fromUserId: string; toUserId: string; content: string;
-  isRead: boolean; createdAt: number;
-}
 export interface SharedGachaItem {
   id: string;
   userId: string;
@@ -39,7 +35,6 @@ export interface SharedState {
   photos: SharedPhoto[];
   littleThings: SharedLittleThing[];
   capsules: SharedCapsule[];
-  messages: SharedMessage[];
   gachaItems: SharedGachaItem[];
 }
 
@@ -58,8 +53,6 @@ interface SyncContextType {
   addLittleThing: (t: Omit<SharedLittleThing, 'id'>) => void;
   addCapsule: (c: Omit<SharedCapsule, 'id'>) => void;
   openCapsule: (id: string) => void;
-  sendMessage: (content: string) => void;
-  markMessageRead: (id: string) => void;
   addGachaItem: (item: Omit<SharedGachaItem, 'id' | 'userId' | 'obtainedAt' | 'used'>) => void;
   useGachaItem: (id: string) => void;
 }
@@ -147,7 +140,7 @@ function getEmptyState(): SharedState {
   return {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
-    littleThings: [], capsules: [], messages: [], gachaItems: [],
+    littleThings: [], capsules: [], gachaItems: [],
   };
 }
 
@@ -189,7 +182,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   const mergeCoins = (localCoins: SharedCoin[], remoteCoins: SharedCoin[]) => {
     const map = new Map<string, number>();
     safe(localCoins).forEach(c => map.set(c.userId, c.coins));
-    safe(remoteCoins).forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
+    safe(remoteCoins).forEach(c => map.set(c.userId, c.coins));
     return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
@@ -201,7 +194,6 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     photos: mergeById(local.photos, remote.photos),
     littleThings: mergeById(local.littleThings, remote.littleThings),
     capsules: mergeById(local.capsules, remote.capsules),
-    messages: mergeById(local.messages, remote.messages),
     gachaItems: mergeById(local.gachaItems, remote.gachaItems),
   };
 }
@@ -529,26 +521,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }));
   }, [updateLocal]);
 
-  const sendMessage = useCallback((content: string) => {
-    if (!user) return;
-    const msg: SharedMessage = {
-      id: Date.now().toString(),
-      fromUserId: user.id,
-      toUserId: user.partnerId,
-      content,
-      isRead: false,
-      createdAt: Date.now(),
-    };
-    updateLocal(prev => ({ ...prev, messages: [...prev.messages, msg] }));
-  }, [user, updateLocal]);
-
-  const markMessageRead = useCallback((id: string) => {
-    updateLocal(prev => ({
-      ...prev,
-      messages: prev.messages.map(m => m.id === id ? { ...m, isRead: true } : m),
-    }));
-  }, [updateLocal]);
-
   const addGachaItem = useCallback((item: Omit<SharedGachaItem, 'id' | 'userId' | 'obtainedAt' | 'used'>) => {
     if (!user) return;
     const gachaItem: SharedGachaItem = {
@@ -575,7 +547,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       state, connected, syncing, lastSync,
       updateMood, updateCoins, addCheckin, addPhoto, deletePhoto, uploadPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
-      sendMessage, markMessageRead, addGachaItem, useGachaItem,
+      addGachaItem, useGachaItem,
     }}>
       {children}
     </SyncContext.Provider>

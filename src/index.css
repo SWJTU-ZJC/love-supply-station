@@ -79,13 +79,6 @@ body {
   100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
 }
 
-/* Burn animation for tree hole messages */
-@keyframes burn {
-  0% { clip-path: inset(0 0 0 0); filter: brightness(1); }
-  50% { clip-path: inset(0 0 0 0); filter: brightness(1.5) sepia(1); }
-  100% { clip-path: inset(100% 0 0 0); filter: brightness(2) sepia(1); }
-}
-
 /* Starry background */
 @keyframes twinkle {
   0%, 100% { opacity: 0.3; }
