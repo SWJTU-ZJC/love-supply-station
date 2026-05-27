@@ -252,28 +252,36 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   // ========== OSS: fetch remote ==========
 
-  const fetchRemote = useCallback(async (): Promise<{ state: SharedState; etag: string } | null> => {
+  // Returns: { state, etag } on new data, 'unchanged' on 304, 'empty' on 404, null on error
+  type FetchResult = { state: SharedState; etag: string } | 'unchanged' | 'empty' | 'error';
+
+  const fetchRemote = useCallback(async (): Promise<FetchResult> => {
     try {
       const baseUrl = await getGetUrl();
       const headers: Record<string, string> = {};
       if (etagRef.current) headers['If-None-Match'] = etagRef.current;
 
       const res = await fetch(baseUrl, { headers });
-      if (res.status === 304) return null; // not modified
+      if (res.status === 304) return 'unchanged';
+      if (res.status === 404) return 'empty';
       if (!res.ok) {
-        if (res.status === 404) return null; // file doesn't exist yet
-        throw new Error(`HTTP ${res.status}`);
+        console.error(`OSS GET failed: HTTP ${res.status}`);
+        return 'error';
       }
 
       const text = await res.text();
-      if (!text) return null;
+      if (!text) return 'empty';
       const remote = JSON.parse(text);
-      if (typeof remote.version !== 'number' || !Array.isArray(remote.moods)) return null;
+      if (typeof remote.version !== 'number' || !Array.isArray(remote.moods)) {
+        console.error('OSS GET: invalid data format');
+        return 'error';
+      }
 
       const etag = res.headers.get('ETag') || '';
       return { state: remote as SharedState, etag };
-    } catch {
-      return null;
+    } catch (e) {
+      console.error('OSS GET error:', e);
+      return 'error';
     }
   }, []);
 
@@ -291,11 +299,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (etag) headers['If-Match'] = etag;
 
       const res = await fetch(url, { method: 'PUT', headers, body });
-      if (res.status === 412) return null; // conflict
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (res.status === 412) return null; // conflict — someone else wrote
+      if (!res.ok) {
+        console.error(`OSS PUT failed: HTTP ${res.status}`);
+        return null;
+      }
 
       return res.headers.get('ETag') || '';
-    } catch {
+    } catch (e) {
+      console.error('OSS PUT error:', e);
       return null;
     }
   }, []);
@@ -309,11 +321,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const result = await fetchRemote();
       if (!mounted) return;
 
-      if (result === null) {
-        // null can mean "no change" (304) or "error"
-        // For 304, we're still connected
-        // We can't distinguish here, so mark connected if we got a response
+      if (result === 'unchanged') {
         setConnected(true);
+        return;
+      }
+
+      if (result === 'empty') {
+        setConnected(true);
+        return;
+      }
+
+      if (result === 'error') {
+        setConnected(false);
         return;
       }
 
@@ -324,7 +343,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       etagRef.current = etag;
 
       setState(prev => {
-        if (remote.version <= prev.version) return prev;
         const merged = mergeStates(prev, remote);
         merged.version = Math.max(prev.version, remote.version) + 1;
         saveLocal(merged);
@@ -365,7 +383,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       if (!newEtag && etag) {
         // Conflict (412) — re-fetch, merge, retry
         const result = await fetchRemote();
-        if (result) {
+        if (result && typeof result === 'object') {
           etagRef.current = result.etag;
           const merged = mergeStates(current, result.state);
           merged.version = Math.max(current.version, result.state.version) + 1;
