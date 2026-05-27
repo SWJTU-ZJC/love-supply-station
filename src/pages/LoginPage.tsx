@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import type { Identity } from '../types';
 
 export default function LoginPage() {
-  const [code, setCode] = useState('love2024');
+  const [code, setCode] = useState('226701');
   const [step, setStep] = useState<'code' | 'identity'>('code');
   const [error, setError] = useState('');
   const { login, isLoggedIn } = useAuth();
@@ -53,7 +53,7 @@ export default function LoginPage() {
                 type="text"
                 value={code}
                 onChange={e => setCode(e.target.value)}
-                placeholder="例如：love2024"
+                placeholder="例如：226701"
                 className="w-full px-5 py-4 rounded-2xl bg-white border-2 border-blush/30 text-text-primary text-lg
                          focus:outline-none focus:border-blush focus:ring-4 focus:ring-blush/20
                          placeholder:text-text-secondary/50 transition-all duration-300"

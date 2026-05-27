@@ -167,8 +167,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   };
   const mergeByUserIdLatest = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
-    safe(b).forEach(x => map.set(x.userId, x));
-    safe(a).forEach(x => {
+    [...safe(a), ...safe(b)].forEach(x => {
       const existing = map.get(x.userId);
       if (!existing || getTime(x) > getTime(existing)) map.set(x.userId, x);
     });
@@ -332,9 +331,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           initDoneRef.current = true;
           console.log(`[sync:${uid}] File empty, creating...`);
           const current = stateRef.current;
-          const newEtag = await pushRemote(current, '');
+          const clean = { ...current, gachaItems: [] };
+          const newEtag = await pushRemote(clean, '');
           if (newEtag) {
             etagRef.current = newEtag;
+            setState(prev => { const s = { ...prev, gachaItems: [] }; saveLocal(s); return s; });
             const now = new Date();
             setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
           }
