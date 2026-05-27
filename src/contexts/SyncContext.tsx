@@ -89,13 +89,9 @@ function buildOssUrl(sig: string, expires: number): string {
   return `https://${OSS_ENDPOINT}/${OSS_KEY}?OSSAccessKeyId=${encodeURIComponent(AK)}&Expires=${expires}&Signature=${encodeURIComponent(sig)}`;
 }
 
-function buildPhotoOssUrl(objectKey: string, sig: string, expires: number): string {
-  return `https://${OSS_ENDPOINT}/${objectKey}?OSSAccessKeyId=${encodeURIComponent(AK)}&Expires=${expires}&Signature=${encodeURIComponent(sig)}`;
-}
+// ========== Image compression (to base64 data URL) ==========
 
-// ========== Image compression ==========
-
-function compressImage(file: File, maxW: number = 1920, quality: number = 0.8): Promise<Blob> {
+function compressToDataUrl(file: File, maxW: number = 600, quality: number = 0.5): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -106,7 +102,7 @@ function compressImage(file: File, maxW: number = 1920, quality: number = 0.8): 
       const ctx = canvas.getContext('2d');
       if (!ctx) { reject(new Error('Canvas unavailable')); return; }
       ctx.drawImage(img, 0, 0, width, height);
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', quality);
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => reject(new Error('Image load failed'));
     img.src = URL.createObjectURL(file);
@@ -214,9 +210,13 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 // ========== Sync state strip ==========
 
 function slimForSync(state: SharedState): SharedState {
+  const maxPhotos = 25;
   return {
     ...state,
     checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })),
+    photos: state.photos.length > maxPhotos
+      ? [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, maxPhotos)
+      : state.photos,
   };
 }
 
@@ -527,42 +527,21 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const uploadPhoto = useCallback(async (file: File, caption: string): Promise<boolean> => {
     if (!user) return false;
     try {
-      const blob = await compressImage(file);
-      const buf = await blob.arrayBuffer();
+      const dataUrl = await compressToDataUrl(file);
       const ts = Date.now();
       const rand = Math.random().toString(36).slice(2, 6);
-      const objectKey = `photos/${user.id}/${ts}_${rand}.jpg`;
-      const bucket = OSS_ENDPOINT.split('.')[0];
-      const resource = `/${bucket}/${objectKey}`;
-
-      const expires = Math.floor(Date.now() / 1000) + 300;
-      const sig = await ossSign('PUT', '', expires, resource);
-      const url = buildPhotoOssUrl(objectKey, sig, expires);
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        body: buf,
-      });
-      if (!res.ok) {
-        console.error(`[sync:${user.id}] Photo upload HTTP ${res.status}`, await res.text());
-        return false;
-      }
-
-      const viewExpires = Math.floor(Date.now() / 1000) + 31536000;
-      const viewSig = await ossSign('GET', '', viewExpires, resource);
-      const photoUrl = buildPhotoOssUrl(objectKey, viewSig, viewExpires);
       const photo: SharedPhoto = {
         id: ts.toString() + rand,
         userId: user.id,
-        url: photoUrl,
+        url: dataUrl,
         createdAt: ts,
         caption,
       };
       addPhoto(photo);
-      console.log(`[sync:${user.id}] Photo uploaded: ${photoUrl}`);
+      console.log(`[sync:${user.id}] Photo saved: ${photo.id} (${(dataUrl.length / 1024).toFixed(0)}KB)`);
       return true;
     } catch (e) {
-      console.error(`[sync:${user.id}] Photo upload error:`, e);
+      console.error(`[sync:${user.id}] Photo error:`, e);
       return false;
     }
   }, [user, addPhoto]);
