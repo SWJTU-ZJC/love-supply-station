@@ -8,6 +8,7 @@ export default function MoviePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef('');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [caption, setCaption] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; id: string } | null>(null);
@@ -22,23 +23,30 @@ export default function MoviePage() {
   }, [caption]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     setError('');
     setUploading(true);
-    try {
-      const ok = await uploadPhoto(file, captionRef.current.trim());
-      if (ok) {
-        setCaption('');
-        setShowUpload(false);
-      } else {
-        setError('上传失败，请检查网络后重试');
+    setProgress({ current: 0, total: files.length });
+    let success = 0;
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const ok = await uploadPhoto(files[i], captionRef.current.trim());
+        if (ok) success++;
+      } catch (err) {
+        console.error('[movie] upload error:', err);
       }
-    } catch (err) {
-      console.error('[movie] upload error:', err);
-      setError('上传出错，请重试');
+      setProgress({ current: i + 1, total: files.length });
     }
     setUploading(false);
+    setProgress(null);
+    if (success > 0) {
+      setCaption('');
+      setShowUpload(false);
+    }
+    if (success < files.length) {
+      setError(`${files.length - success} 张上传失败，${success} 张成功`);
+    }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -72,6 +80,7 @@ export default function MoviePage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileChange}
         className="absolute left-0 top-0 w-0 h-0 opacity-0 pointer-events-none"
       />
@@ -87,23 +96,39 @@ export default function MoviePage() {
             onClick={e => e.stopPropagation()}
           >
             <h3 className="font-semibold text-lg text-text-primary mb-1">上传照片</h3>
-            <p className="text-text-secondary text-xs mb-4">挑选一张照片，可添加一句描述</p>
+            <p className="text-text-secondary text-xs mb-4">支持多选，一次上传多张照片</p>
             <input
               value={caption}
               onChange={e => setCaption(e.target.value)}
-              placeholder="照片描述（可选）..."
+              placeholder="照片描述（可选，所有照片共用）..."
               className="w-full px-4 py-2.5 rounded-btn bg-apricot/50 text-text-primary text-sm
                        focus:outline-none focus:ring-2 focus:ring-blush/50 mb-4"
               maxLength={100}
+              disabled={uploading}
             />
+            {progress && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-text-secondary mb-1.5">
+                  <span>上传中...</span>
+                  <span>{progress.current} / {progress.total}</span>
+                </div>
+                <div className="w-full h-2 bg-apricot rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blush rounded-full transition-all duration-300"
+                    style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
             {error && (
               <p className="text-red-400 text-xs mb-3">{error}</p>
             )}
             <div className="flex gap-2">
               <button
-                onClick={() => setShowUpload(false)}
+                onClick={() => { if (!uploading) { setShowUpload(false); setError(''); } }}
+                disabled={uploading}
                 className="flex-1 py-2.5 rounded-btn bg-apricot/50 text-text-secondary text-sm font-semibold
-                         hover:bg-apricot transition-colors"
+                         hover:bg-apricot transition-colors disabled:opacity-50"
               >
                 取消
               </button>
@@ -111,7 +136,7 @@ export default function MoviePage() {
                 onClick={openPicker}
                 disabled={uploading}
                 className="flex-1 py-2.5 rounded-btn text-white text-sm font-semibold
-                         btn-gradient transition-all"
+                         btn-gradient transition-all disabled:opacity-60"
               >
                 {uploading ? '上传中...' : '选择图片'}
               </button>
