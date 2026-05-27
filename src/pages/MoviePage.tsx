@@ -10,20 +10,28 @@ export default function MoviePage() {
   const [caption, setCaption] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const photos = state.photos || [];
   const sorted = [...photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-  const handleUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError('');
     setUploading(true);
-    const ok = await uploadPhoto(file, caption.trim());
-    setUploading(false);
-    if (ok) {
-      setCaption('');
-      setShowUpload(false);
+    try {
+      const ok = await uploadPhoto(file, caption.trim());
+      if (ok) {
+        setCaption('');
+        setShowUpload(false);
+      } else {
+        setError('上传失败，请检查网络后重试');
+      }
+    } catch {
+      setError('上传出错，请重试');
     }
+    setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [uploadPhoto, caption]);
 
@@ -40,7 +48,7 @@ export default function MoviePage() {
           </p>
         </div>
         <button
-          onClick={() => { setShowUpload(true); setCaption(''); }}
+          onClick={() => { setShowUpload(true); setCaption(''); setError(''); }}
           className="px-4 py-2 rounded-btn text-white text-sm font-semibold
                    bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
                    hover:shadow-soft-lg active:scale-[0.98] transition-all"
@@ -48,6 +56,15 @@ export default function MoviePage() {
           + 上传照片
         </button>
       </div>
+
+      {/* Hidden file input — always mounted so ref is stable */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
       {/* Upload modal */}
       {showUpload && (
@@ -69,14 +86,9 @@ export default function MoviePage() {
                        focus:outline-none focus:ring-2 focus:ring-blush/50 mb-4"
               maxLength={100}
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleUpload}
-              className="hidden"
-              id="movie-upload-input"
-            />
+            {error && (
+              <p className="text-red-400 text-xs mb-3">{error}</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setShowUpload(false)}
@@ -120,6 +132,16 @@ export default function MoviePage() {
                 alt={photo.caption || ''}
                 loading="lazy"
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (!img.dataset.retried) {
+                    img.dataset.retried = '1';
+                    const photoUrl = getUrl(photo);
+                    if (photoUrl.includes('OSSAccessKeyId')) {
+                      img.src = photoUrl.replace(/Expires=\d+/, `Expires=${Math.floor(Date.now() / 1000) + 3600}`);
+                    }
+                  }
+                }}
               />
               {photo.caption && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2">
@@ -128,7 +150,7 @@ export default function MoviePage() {
               )}
               <div className="absolute top-1 left-1">
                 <span className="text-xs bg-black/30 text-white rounded-full px-2 py-0.5">
-                  {photo.userId === user?.id ? '我' : partner?.nickname}
+                  {photo.userId === user?.id ? '我' : partner?.nickname || 'TA'}
                 </span>
               </div>
             </div>
