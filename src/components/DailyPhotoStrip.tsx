@@ -120,7 +120,7 @@ export default function DailyPhotoStrip() {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUpload} className="absolute left-0 top-0 w-0 h-0 opacity-0 pointer-events-none" />
     </div>
   );
 }

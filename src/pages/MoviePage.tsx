@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 
@@ -6,6 +6,7 @@ export default function MoviePage() {
   const { user, partner } = useAuth();
   const { state, uploadPhoto } = useSync();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const captionRef = useRef('');
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState('');
   const [showUpload, setShowUpload] = useState(false);
@@ -15,25 +16,35 @@ export default function MoviePage() {
   const photos = state.photos || [];
   const sorted = [...photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Keep captionRef in sync
+  useEffect(() => {
+    captionRef.current = caption;
+  }, [caption]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setError('');
     setUploading(true);
     try {
-      const ok = await uploadPhoto(file, caption.trim());
+      const ok = await uploadPhoto(file, captionRef.current.trim());
       if (ok) {
         setCaption('');
         setShowUpload(false);
       } else {
         setError('上传失败，请检查网络后重试');
       }
-    } catch {
+    } catch (err) {
+      console.error('[movie] upload error:', err);
       setError('上传出错，请重试');
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [uploadPhoto, caption]);
+  };
+
+  const openPicker = () => {
+    fileInputRef.current?.click();
+  };
 
   const getUrl = (p: any) => p.url || p.imageUrl || '';
 
@@ -57,13 +68,13 @@ export default function MoviePage() {
         </button>
       </div>
 
-      {/* Hidden file input — always mounted so ref is stable */}
+      {/* File input — off-screen instead of hidden for reliable click() */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         onChange={handleFileChange}
-        className="hidden"
+        className="absolute left-0 top-0 w-0 h-0 opacity-0 pointer-events-none"
       />
 
       {/* Upload modal */}
@@ -98,7 +109,7 @@ export default function MoviePage() {
                 取消
               </button>
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={openPicker}
                 disabled={uploading}
                 className="flex-1 py-2.5 rounded-btn text-white text-sm font-semibold
                          bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
@@ -132,16 +143,6 @@ export default function MoviePage() {
                 alt={photo.caption || ''}
                 loading="lazy"
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  if (!img.dataset.retried) {
-                    img.dataset.retried = '1';
-                    const photoUrl = getUrl(photo);
-                    if (photoUrl.includes('OSSAccessKeyId')) {
-                      img.src = photoUrl.replace(/Expires=\d+/, `Expires=${Math.floor(Date.now() / 1000) + 3600}`);
-                    }
-                  }
-                }}
               />
               {photo.caption && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2">
