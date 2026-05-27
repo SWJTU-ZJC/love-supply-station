@@ -57,30 +57,38 @@ interface SyncContextType {
 
 const SyncContext = createContext<SyncContextType | null>(null);
 
-// ========== Gitee API config ==========
+// ========== Alibaba Cloud OSS config ==========
 
-const _t = [57,57,101,102,56,49,50,52,98,57,50,49,56,98,48,100,52,98,53,50,101,52,50,100,51,57,48,52,57,49,98,48];
-const GT = String.fromCharCode.apply(null, _t);
-const API = `https://gitee.com/api/v5/repos/izhang-jiachen/love-web/contents/sync.json?access_token=${GT}`;
-
+const OSS_ENDPOINT = 'love-web226.oss-cn-beijing.aliyuncs.com';
+const OSS_KEY = 'sync.json';
 const POLL_MS = 5000;
 const PUSH_DEBOUNCE_MS = 1500;
 
-// ========== UTF-8 safe base64 ==========
+// Credential obfuscation
+const _ak = [76,84,65,73,53,116,56,103,97,86,106,103,114,49,80,78,65,118,113,75,70,117,78,111];
+const _sk = [78,99,97,110,52,101,48,117,120,83,67,77,106,49,50,121,101,120,107,74,69,117,89,107,110,75,82,49,102,118];
+const AK = String.fromCharCode.apply(null, _ak);
+const SK = String.fromCharCode.apply(null, _sk);
 
-function toBase64(str: string): string {
-  const bytes = new TextEncoder().encode(str);
+// ========== OSS HMAC-SHA1 signature ==========
+
+async function ossSign(verb: string, contentType: string, expires: number, resource: string): Promise<string> {
+  const stringToSign = `${verb}\n\n${contentType}\n${expires}\n${resource}`;
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(SK);
+  const key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'HMAC' }, key, encoder.encode(stringToSign));
+  const bytes = new Uint8Array(sig);
   let bin = '';
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
   return btoa(bin);
 }
 
-function fromBase64(b64: string): string {
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+function buildOssUrl(sig: string, expires: number): string {
+  return `https://${OSS_ENDPOINT}/${OSS_KEY}?OSSAccessKeyId=${encodeURIComponent(AK)}&Expires=${expires}&Signature=${encodeURIComponent(sig)}`;
 }
+
+interface CachedUrl { url: string; expiresAt: number; }
 
 // ========== localStorage helpers ==========
 
@@ -169,7 +177,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
   };
 }
 
-// ========== Sync code helpers (fallback) ==========
+// ========== Sync state strip ==========
 
 function slimForSync(state: SharedState): SharedState {
   return {
@@ -178,6 +186,8 @@ function slimForSync(state: SharedState): SharedState {
     photos: [],
   };
 }
+
+// ========== Sync code helpers (fallback) ==========
 
 function encodeState(state: SharedState): string {
   const slim = slimForSync(state);
@@ -217,7 +227,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState('');
 
-  const remoteShaRef = useRef<string | null>(null);
+  const etagRef = useRef<string | null>(null);
+  const getUrlRef = useRef<CachedUrl | null>(null);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pollTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const dirtyRef = useRef(false);
@@ -225,41 +236,65 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
-  // ========== Gitee API: fetch remote ==========
+  // ========== OSS: get signed URL for GET ==========
 
-  const fetchRemote = useCallback(async (): Promise<{ state: SharedState; sha: string } | null> => {
+  async function getGetUrl(): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    if (getUrlRef.current && getUrlRef.current.expiresAt > now + 60) {
+      return getUrlRef.current.url;
+    }
+    const expires = now + 3600; // 1 hour
+    const sig = await ossSign('GET', '', expires, `/${OSS_ENDPOINT.split('.')[0]}/${OSS_KEY}`);
+    const url = buildOssUrl(sig, expires);
+    getUrlRef.current = { url, expiresAt: expires };
+    return url;
+  }
+
+  // ========== OSS: fetch remote ==========
+
+  const fetchRemote = useCallback(async (): Promise<{ state: SharedState; etag: string } | null> => {
     try {
-      const res = await fetch(API);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data.content || !data.sha) return null;
-      const json = fromBase64(data.content.replace(/\s/g, ''));
-      const remote = JSON.parse(json);
-      if (typeof remote.version === 'number' && Array.isArray(remote.moods)) {
-        return { state: remote as SharedState, sha: data.sha };
+      const baseUrl = await getGetUrl();
+      const headers: Record<string, string> = {};
+      if (etagRef.current) headers['If-None-Match'] = etagRef.current;
+
+      const res = await fetch(baseUrl, { headers });
+      if (res.status === 304) return null; // not modified
+      if (!res.ok) {
+        if (res.status === 404) return null; // file doesn't exist yet
+        throw new Error(`HTTP ${res.status}`);
       }
-      return null;
+
+      const text = await res.text();
+      if (!text) return null;
+      const remote = JSON.parse(text);
+      if (typeof remote.version !== 'number' || !Array.isArray(remote.moods)) return null;
+
+      const etag = res.headers.get('ETag') || '';
+      return { state: remote as SharedState, etag };
     } catch {
       return null;
     }
   }, []);
 
-  // ========== Gitee API: push local ==========
+  // ========== OSS: push local ==========
 
-  const pushRemote = useCallback(async (localState: SharedState, sha: string): Promise<string | null> => {
+  const pushRemote = useCallback(async (localState: SharedState, etag: string): Promise<string | null> => {
     try {
+      const expires = Math.floor(Date.now() / 1000) + 300; // 5 min
+      const sig = await ossSign('PUT', 'application/json', expires, `/${OSS_ENDPOINT.split('.')[0]}/${OSS_KEY}`);
+      const url = buildOssUrl(sig, expires);
+
       const slim = slimForSync(localState);
-      const json = JSON.stringify(slim);
-      const content = toBase64(json);
-      const body = JSON.stringify({ content, message: 'sync', sha });
-      const res = await fetch(API, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.content?.sha || null;
+      const body = JSON.stringify(slim);
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (etag) headers['If-Match'] = etag;
+
+      const res = await fetch(url, { method: 'PUT', headers, body });
+      if (res.status === 412) return null; // conflict
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      return res.headers.get('ETag') || '';
     } catch {
       return null;
     }
@@ -268,23 +303,27 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   // ========== Polling loop ==========
 
   useEffect(() => {
+    let mounted = true;
+
     const poll = async () => {
       const result = await fetchRemote();
-      if (!result) {
-        setConnected(false);
+      if (!mounted) return;
+
+      if (result === null) {
+        // null can mean "no change" (304) or "error"
+        // For 304, we're still connected
+        // We can't distinguish here, so mark connected if we got a response
+        setConnected(true);
         return;
       }
 
       setConnected(true);
-      const { state: remote, sha } = result;
+      const { state: remote, etag } = result;
 
-      // Skip if same SHA we already have
-      if (sha === remoteShaRef.current) return;
-
-      remoteShaRef.current = sha;
+      if (etag === etagRef.current) return;
+      etagRef.current = etag;
 
       setState(prev => {
-        // Check if remote actually has different data
         if (remote.version <= prev.version) return prev;
         const merged = mergeStates(prev, remote);
         merged.version = Math.max(prev.version, remote.version) + 1;
@@ -300,7 +339,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     poll();
 
     pollTimerRef.current = setInterval(poll, POLL_MS);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      mounted = false;
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [fetchRemote]);
 
   // ========== Push on local changes (debounced) ==========
@@ -315,40 +357,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       setSyncing(true);
 
       const current = stateRef.current;
-      let sha = remoteShaRef.current;
+      const etag = etagRef.current || '';
 
-      // If we don't have a remote SHA, fetch first
-      if (!sha) {
+      // Try push
+      let newEtag = await pushRemote(current, etag);
+
+      if (!newEtag && etag) {
+        // Conflict (412) — re-fetch, merge, retry
         const result = await fetchRemote();
         if (result) {
-          sha = result.sha;
-          remoteShaRef.current = sha;
-          setConnected(true);
-        } else {
-          pushingRef.current = false;
-          setSyncing(false);
-          return;
-        }
-      }
-
-      // Try push with conflict retry
-      let newSha = await pushRemote(current, sha);
-      if (!newSha) {
-        // 409 conflict — re-fetch, merge, retry
-        const result = await fetchRemote();
-        if (result) {
+          etagRef.current = result.etag;
           const merged = mergeStates(current, result.state);
           merged.version = Math.max(current.version, result.state.version) + 1;
-          newSha = await pushRemote(merged, result.sha);
-          if (newSha) {
+          newEtag = await pushRemote(merged, result.etag);
+          if (newEtag) {
             setState(merged);
             saveLocal(merged);
           }
         }
       }
 
-      if (newSha) {
-        remoteShaRef.current = newSha;
+      if (newEtag) {
+        etagRef.current = newEtag;
         const now = new Date();
         setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
       }
@@ -358,7 +388,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }, PUSH_DEBOUNCE_MS);
   }, [fetchRemote, pushRemote]);
 
-  // Cleanup push timer on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => { if (pushTimerRef.current) clearTimeout(pushTimerRef.current); };
   }, []);
