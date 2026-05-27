@@ -155,18 +155,23 @@ export default function ProfilePage() {
             <span className="text-text-primary text-sm">界面风格</span>
             <span className="text-text-secondary text-xs ml-auto">{uiModeLabels[uiMode]}</span>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 gap-3">
             {(Object.keys(uiModeLabels) as UIMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setUIMode(m)}
-                className={`flex flex-col items-center gap-1 py-2 rounded-xl text-xs transition-all
+                className={`flex flex-col items-center gap-2 py-3 rounded-xl transition-all
                   ${uiMode === m ? 'bg-apricot ring-2 ring-blush/40' : 'hover:bg-apricot/30 text-text-secondary'}`}
               >
-                <span className="text-lg">
-                  {m === 'default' ? '📐' : m === 'glass' ? '🫧' : m === 'editorial' ? '📰' : m === 'playful' ? '🎈' : '🍂'}
+                <span className="text-2xl">
+                  {m === 'default' ? '📐' : '✨'}
                 </span>
-                <span className={uiMode === m ? 'text-text-primary font-semibold' : ''}>{uiModeLabels[m]}</span>
+                <div className="text-center">
+                  <p className={`text-sm ${uiMode === m ? 'text-text-primary font-semibold' : ''}`}>{uiModeLabels[m]}</p>
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    {m === 'default' ? '温暖圆润' : '极简轻盈'}
+                  </p>
+                </div>
               </button>
             ))}
           </div>
