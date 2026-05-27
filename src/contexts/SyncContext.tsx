@@ -233,6 +233,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const pollTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const dirtyRef = useRef(false);
   const pushingRef = useRef(false);
+  const initDoneRef = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -328,6 +329,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
       if (result === 'empty') {
         setConnected(true);
+        // File doesn't exist yet — create it with current local state
+        if (!initDoneRef.current) {
+          initDoneRef.current = true;
+          const current = stateRef.current;
+          const newEtag = await pushRemote(current, '');
+          if (newEtag) {
+            etagRef.current = newEtag;
+            const now = new Date();
+            setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+          }
+        }
         return;
       }
 
@@ -361,7 +373,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       mounted = false;
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [fetchRemote]);
+  }, [fetchRemote, pushRemote]);
 
   // ========== Push on local changes (debounced) ==========
 
