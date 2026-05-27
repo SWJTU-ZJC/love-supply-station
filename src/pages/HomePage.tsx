@@ -38,23 +38,25 @@ export default function HomePage() {
   return (
     <div className="page-enter px-5 pt-8 pb-4 space-y-6">
       {/* Header */}
-      <div className="text-center mb-2">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <span className="text-2xl animate-[float_3s_ease-in-out_infinite]">🐰</span>
-          <h1 className="font-title text-4xl bg-gradient-to-r from-blush via-sunset to-calm bg-clip-text text-transparent">
+      <div className="text-center">
+        <div className="flex items-center justify-center gap-1.5">
+          <span className="text-2xl animate-[float_3s_ease-in-out_infinite]">🐻</span>
+          <h1 className="font-title text-4xl bg-gradient-to-r from-blush via-sunset to-blush bg-clip-text text-transparent">
             张佳琛 & 周佳慧
           </h1>
-          <span className="text-2xl animate-[float_3s_ease-in-out_infinite_0.5s]">🐻</span>
+          <span className="text-2xl animate-[float_3s_ease-in-out_infinite_0.5s]">🐰</span>
         </div>
+        <p className="text-text-secondary text-xs mt-0.5">💕 恋爱补给站 💕</p>
+      </div>
+
+      <div className="flex items-center justify-between mt-1">
         <p className="text-text-secondary text-xs">
           {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
         </p>
-      </div>
-
-      {/* Coin bar */}
-      <div className="flex items-center justify-center gap-2 bg-white rounded-full px-4 py-2 shadow-soft mx-auto w-fit">
-        <span className="text-lg">🪙</span>
-        <span className="font-semibold text-sunset">{myCoins}</span>
+        <div className="flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 shadow-soft">
+          <span className="text-sm">🪙</span>
+          <span className="font-semibold text-sunset text-sm">{myCoins}</span>
+        </div>
       </div>
 
       {/* Mood Bar */}
