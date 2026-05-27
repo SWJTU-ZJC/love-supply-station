@@ -169,16 +169,17 @@ function getDefaultLittleThings(): SharedLittleThing[] {
 // ========== Merge logic ==========
 
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
+  const safe = (arr: any[]) => arr || [];
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
     const map = new Map<string, T>();
-    a.forEach(x => map.set(x.id, x));
-    b.forEach(x => map.set(x.id, x));
+    safe(a).forEach(x => map.set(x.id, x));
+    safe(b).forEach(x => map.set(x.id, x));
     return Array.from(map.values());
   };
 
   const mergeByUserIdLatest = <T extends { userId: string }>(a: T[], b: T[], getTime: (x: T) => number) => {
     const map = new Map<string, T>();
-    [...a, ...b].forEach(x => {
+    [...safe(a), ...safe(b)].forEach(x => {
       const existing = map.get(x.userId);
       if (!existing || getTime(x) > getTime(existing)) map.set(x.userId, x);
     });
@@ -187,8 +188,8 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 
   const mergeCoins = (localCoins: SharedCoin[], remoteCoins: SharedCoin[]) => {
     const map = new Map<string, number>();
-    localCoins.forEach(c => map.set(c.userId, c.coins));
-    remoteCoins.forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
+    safe(localCoins).forEach(c => map.set(c.userId, c.coins));
+    safe(remoteCoins).forEach(c => map.set(c.userId, Math.max(c.coins, map.get(c.userId) || 0)));
     return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
@@ -279,9 +280,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         return 'error';
       }
 
+      const safe = { ...getEmptyState(), ...remote } as SharedState;
       const etag = res.headers.get('ETag') || '';
-      console.log(`[sync:${uid}] GET ok v${remote.version} moods:${remote.moods?.length || 0}`);
-      return { state: remote as SharedState, etag };
+      console.log(`[sync:${uid}] GET ok v${safe.version} moods:${safe.moods?.length || 0}`);
+      return { state: safe, etag };
     } catch (e) {
       console.error(`[sync:${uid}] OSS GET error:`, e);
       return 'error';
