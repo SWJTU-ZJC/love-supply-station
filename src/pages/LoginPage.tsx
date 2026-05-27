@@ -64,8 +64,8 @@ export default function LoginPage() {
             <button
               type="submit"
               className="w-full py-4 rounded-2xl font-semibold text-white text-lg
-                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                       hover:shadow-soft-lg active:scale-[0.98] transition-all duration-300"
+                       btn-gradient
+                       transition-all duration-300"
             >
               进入补给站 💕
             </button>

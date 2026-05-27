@@ -7,14 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: '#FFFBF5',
-        apricot: '#FFF5EC',
-        blush: '#FFB3B3',
-        sunset: '#FFC3A0',
-        calm: '#A0C4FF',
-        'text-primary': '#4A3F3F',
-        'text-secondary': '#9E8F8F',
-        mint: '#A8E6CE',
+        cream: 'var(--color-bg)',
+        apricot: 'var(--color-bg-soft)',
+        blush: 'var(--color-primary)',
+        sunset: 'var(--color-accent)',
+        calm: 'var(--color-blue)',
+        'text-primary': 'var(--color-text)',
+        'text-secondary': 'var(--color-text-soft)',
+        mint: 'var(--color-green)',
       },
       fontFamily: {
         title: ['"ZCOOL KuaiLe"', 'cursive', 'system-ui', 'sans-serif'],
@@ -26,8 +26,8 @@ export default {
         'btn': '12px',
       },
       boxShadow: {
-        'soft': '0 4px 20px rgba(74, 63, 63, 0.08)',
-        'soft-lg': '0 8px 30px rgba(74, 63, 63, 0.12)',
+        'soft': '0 4px 20px var(--shadow-soft)',
+        'soft-lg': '0 8px 30px var(--shadow-lg)',
       },
       maxWidth: {
         'app': '480px',

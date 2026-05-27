@@ -5,10 +5,13 @@ import MoodBar from '../components/MoodBar';
 import DailyPhotoStrip from '../components/DailyPhotoStrip';
 import FeatureGrid from '../components/FeatureGrid';
 import confetti from 'canvas-confetti';
+import { useTheme, themeColors } from '../contexts/ThemeContext';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
   const { state } = useSync();
+  const { theme } = useTheme();
+  const tc = themeColors[theme];
   const [showHearts, setShowHearts] = useState(false);
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
@@ -22,7 +25,7 @@ export default function HomePage() {
         particleCount: 50,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#FFB3B3', '#FFC3A0', '#A0C4FF', '#A8E6CE'],
+        colors: [tc.primary, tc.accent, tc.blue, tc.green],
       });
     }, 500);
     return () => clearTimeout(timer);

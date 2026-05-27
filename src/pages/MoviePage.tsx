@@ -61,8 +61,7 @@ export default function MoviePage() {
         <button
           onClick={() => { setShowUpload(true); setCaption(''); setError(''); }}
           className="px-4 py-2 rounded-btn text-white text-sm font-semibold
-                   bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                   hover:shadow-soft-lg active:scale-[0.98] transition-all"
+                   btn-gradient transition-all"
         >
           + 上传照片
         </button>
@@ -112,8 +111,7 @@ export default function MoviePage() {
                 onClick={openPicker}
                 disabled={uploading}
                 className="flex-1 py-2.5 rounded-btn text-white text-sm font-semibold
-                         bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
-                         disabled:opacity-50 hover:shadow-soft-lg active:scale-[0.98] transition-all"
+                         btn-gradient transition-all"
               >
                 {uploading ? '上传中...' : '选择图片'}
               </button>

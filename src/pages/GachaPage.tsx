@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
+import { useTheme, themeColors } from '../contexts/ThemeContext';
 
 interface GachaItem {
   name: string;
@@ -21,17 +22,23 @@ const gachaPool: GachaItem[] = [
   { name: '旅行任意门', icon: '✈️', rarity: 'super' },
 ];
 
-const rarityConfig = {
-  normal: { color: '#A8E6CE', label: '普通', weight: 60 },
-  rare: { color: '#A0C4FF', label: '稀有', weight: 30 },
-  super: { color: '#FFB3B3', label: '超级', weight: 10 },
-};
+const rarityWeights = { normal: 60, rare: 30, super: 10 };
+
+type ThemeColorSet = { primary: string; accent: string; blue: string; green: string };
+
+function getRarityConfig(tc: ThemeColorSet) {
+  return {
+    normal: { color: tc.green, label: '普通', weight: rarityWeights.normal },
+    rare: { color: tc.blue, label: '稀有', weight: rarityWeights.rare },
+    super: { color: tc.primary, label: '超级', weight: rarityWeights.super },
+  };
+}
 
 function pickGacha(): GachaItem {
-  const total = Object.values(rarityConfig).reduce((sum, c) => sum + c.weight, 0);
+  const total = Object.values(rarityWeights).reduce((sum, w) => sum + w, 0);
   let rand = Math.random() * total;
-  for (const [rarity, config] of Object.entries(rarityConfig)) {
-    rand -= config.weight;
+  for (const [rarity, weight] of Object.entries(rarityWeights)) {
+    rand -= weight;
     if (rand <= 0) {
       const pool = gachaPool.filter(i => i.rarity === rarity);
       return pool[Math.floor(Math.random() * pool.length)];
@@ -44,6 +51,9 @@ export default function GachaPage() {
   const navigate = useNavigate();
   const { user, partner } = useAuth();
   const { state, updateCoins, addGachaItem, useGachaItem } = useSync();
+  const { theme } = useTheme();
+  const tc = themeColors[theme];
+  const rarityConfig = getRarityConfig(tc);
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<GachaItem | null>(null);
   const [scratched, setScratched] = useState(false);
@@ -107,7 +117,7 @@ export default function GachaPage() {
         if (transparent / (pixels.length / 4) > 0.5) {
           setScratched(true);
           canvas.style.pointerEvents = 'none';
-          confetti({ particleCount: 60, spread: 80, origin: { y: 0.6 }, colors: ['#FFB3B3', '#FFC3A0', '#A0C4FF'] });
+          confetti({ particleCount: 60, spread: 80, origin: { y: 0.6 }, colors: [tc.primary, tc.accent, tc.blue] });
         }
       };
 
@@ -147,7 +157,7 @@ export default function GachaPage() {
   const handleClaim = () => {
     if (!result) return;
     addGachaItem({ name: result.name, icon: result.icon, rarity: result.rarity });
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 }, colors: ['#FFC3A0', '#FFB3B3', '#A8E6CE'] });
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.5 }, colors: [tc.accent, tc.primary, tc.green] });
     setResult(null);
     setScratched(false);
   };
@@ -229,7 +239,7 @@ export default function GachaPage() {
                          flex items-center justify-center text-xl font-bold transition-all duration-500 z-20
                          ${spinning ? 'bg-blush text-white animate-[spin_0.5s_linear_infinite]'
                            : myCoins < cost ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                             : 'bg-gradient-to-br from-sunset to-blush text-white hover:scale-110 active:scale-95'}`}
+                             : 'bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-primary)] text-white hover:scale-110 active:scale-95'}`}
             >
               {spinning ? '🌀' : '🔘'}
             </button>
@@ -253,7 +263,7 @@ export default function GachaPage() {
                     <span className="text-4xl">{result.icon}</span>
                     <span className="font-bold text-lg text-text-primary mt-1">{result.name}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full mt-1"
-                          style={{ backgroundColor: rarityConfig[result.rarity].color + '40', color: '#4A3F3F' }}>
+                          style={{ backgroundColor: rarityConfig[result.rarity].color + '40', color: 'var(--color-text)' }}>
                       {rarityConfig[result.rarity].label}
                     </span>
                   </div>
@@ -271,7 +281,7 @@ export default function GachaPage() {
                 {scratched ? (
                   <button onClick={handleClaim}
                     className="w-full py-3 rounded-btn text-white font-semibold
-                             bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] hover:shadow-soft-lg transition-all">
+                             btn-gradient transition-all">
                     收下啦！💝
                   </button>
                 ) : (
@@ -306,7 +316,7 @@ export default function GachaPage() {
                         <div className="flex-1">
                           <p className="font-semibold text-text-primary text-sm">{item.name}</p>
                           <span className="text-xs px-1.5 py-0.5 rounded-full"
-                                style={{ backgroundColor: rarityConfig[item.rarity].color + '40', color: '#4A3F3F' }}>
+                                style={{ backgroundColor: rarityConfig[item.rarity].color + '40', color: 'var(--color-text)' }}>
                             {rarityConfig[item.rarity].label}
                           </span>
                         </div>
@@ -360,7 +370,7 @@ export default function GachaPage() {
                     <div className="flex-1">
                       <p className="font-semibold text-text-primary text-sm">{item.name}</p>
                       <span className="text-xs px-1.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: rarityConfig[item.rarity].color + '40', color: '#4A3F3F' }}>
+                            style={{ backgroundColor: rarityConfig[item.rarity].color + '40', color: 'var(--color-text)' }}>
                         {rarityConfig[item.rarity].label}
                       </span>
                     </div>

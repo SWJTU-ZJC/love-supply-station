@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
+import { useTheme, themeColors } from '../contexts/ThemeContext';
 
 export default function LittleThingsPage() {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ export default function LittleThingsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [newThing, setNewThing] = useState('');
 
+  const { theme } = useTheme();
+  const tc = themeColors[theme];
   const things = state.littleThings || [];
   const doneCount = things.filter(t => t.isDone).length;
   const progress = things.length > 0 ? Math.round((doneCount / things.length) * 100) : 0;
@@ -26,7 +29,7 @@ export default function LittleThingsPage() {
       particleCount: 40,
       spread: 60,
       origin: { y: 0.7 },
-      colors: ['#A8E6CE', '#FFB3B3', '#FFC3A0'],
+      colors: [tc.green, tc.primary, tc.accent],
     });
   };
 
@@ -64,7 +67,7 @@ export default function LittleThingsPage() {
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, #FFB3B3, #FFC3A0)',
+              background: `linear-gradient(90deg, ${tc.primary}, ${tc.accent})`,
             }}
           />
         </div>
@@ -112,7 +115,7 @@ export default function LittleThingsPage() {
         <button
           onClick={() => setShowAdd(true)}
           className="fixed bottom-24 right-6 w-14 h-14 rounded-full shadow-soft-lg
-                   bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
+                   btn-gradient
                    text-white text-2xl flex items-center justify-center
                    hover:scale-110 active:scale-95 transition-all z-40"
         >
@@ -137,7 +140,7 @@ export default function LittleThingsPage() {
               className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold">取消</button>
             <button onClick={handleAdd} disabled={!newThing.trim()}
               className="flex-1 py-3 rounded-btn text-white font-semibold
-                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] disabled:opacity-50">
+                       btn-gradient">
               添加 💝
             </button>
           </div>

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import L from 'leaflet';
 import confetti from 'canvas-confetti';
+import { useTheme, themeColors } from '../contexts/ThemeContext';
 
 function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -25,6 +26,8 @@ function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.7
 export default function MapPage() {
   const { user, partner } = useAuth();
   const { state, addCheckin, deleteCheckin, updateCoins } = useSync();
+  const { theme } = useTheme();
+  const tc = themeColors[theme];
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +135,7 @@ export default function MapPage() {
     const icon = L.divIcon({
       html: `<div style="
         width:40px;height:40px;border-radius:50%;
-        background:${isMine ? '#FFB3B3' : '#A0C4FF'};
+        background:${isMine ? 'var(--color-primary)' : 'var(--color-blue)'};
         display:flex;align-items:center;justify-content:center;
         font-size:22px;
         border:3px solid white;
@@ -146,8 +149,8 @@ export default function MapPage() {
     marker.bindPopup(`
       <div style="font-family: system-ui; padding: 8px; max-width: 200px;">
         ${checkin.imageUrl ? `<img src="${checkin.imageUrl}" style="width:100%; border-radius:8px; margin-bottom:6px;" />` : ''}
-        <p style="margin:0 0 4px; color:#4A3F3F; font-size:14px;">${checkin.note}</p>
-        <p style="margin:0; color:#9E8F8F; font-size:11px;">${checkin.createdAt} · ${isMine ? '我' : partner?.nickname}</p>
+        <p style="margin:0 0 4px; color:var(--color-text); font-size:14px;">${checkin.note}</p>
+        <p style="margin:0; color:var(--color-text-soft); font-size:11px;">${checkin.createdAt} · ${isMine ? '我' : partner?.nickname}</p>
       </div>
     `);
     marker.on('click', () => setSelectedCheckin(checkin));
@@ -186,7 +189,7 @@ export default function MapPage() {
     });
 
     updateCoins(myCoins + 2);
-    confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 }, colors: ['#FFB3B3', '#A0C4FF'] });
+    confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 }, colors: [tc.primary, tc.blue] });
 
     setNewNote('');
     setPhotoFile(null);
@@ -228,7 +231,7 @@ export default function MapPage() {
             disabled={!gpsPos}
             className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000]
                      px-6 py-3 rounded-full shadow-soft-lg text-white font-semibold
-                     bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
+                     btn-gradient
                      disabled:opacity-40 hover:shadow-xl active:scale-95 transition-all"
           >
             📍 在此打卡 +2🪙
@@ -261,8 +264,10 @@ export default function MapPage() {
                     <span className="text-xs text-text-secondary">{c.createdAt}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded-full"
                           style={{
-                            backgroundColor: c.userId === user?.id ? '#FFB3B340' : '#A0C4FF40',
-                            color: '#4A3F3F',
+                            backgroundColor: c.userId === user?.id
+                              ? `color-mix(in srgb, var(--color-primary) 25%, transparent)`
+                              : `color-mix(in srgb, var(--color-blue) 25%, transparent)`,
+                            color: 'var(--color-text)',
                           }}>
                       {c.userId === user?.id ? '我' : partner?.nickname}
                     </span>
@@ -339,7 +344,7 @@ export default function MapPage() {
                 onClick={handleCheckin}
                 disabled={!newNote.trim() || !gpsPos || uploading}
                 className="flex-1 py-3 rounded-btn text-white font-semibold
-                         bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] disabled:opacity-50">
+                         btn-gradient disabled:opacity-50">
                 {uploading ? '上传中...' : '打卡 💕'}
               </button>
             </div>
@@ -361,15 +366,17 @@ export default function MapPage() {
               <p className="text-text-secondary text-sm">{selectedCheckin.createdAt}</p>
               <span className="text-xs px-1.5 py-0.5 rounded-full"
                     style={{
-                      backgroundColor: selectedCheckin.userId === user?.id ? '#FFB3B340' : '#A0C4FF40',
-                      color: '#4A3F3F',
+                      backgroundColor: selectedCheckin.userId === user?.id
+                        ? `color-mix(in srgb, var(--color-primary) 25%, transparent)`
+                        : `color-mix(in srgb, var(--color-blue) 25%, transparent)`,
+                      color: 'var(--color-text)',
                     }}>
                 {selectedCheckin.userId === user?.id ? '我' : partner?.nickname}
               </span>
             </div>
             <button onClick={() => setSelectedCheckin(null)}
               className="mt-4 w-full py-3 rounded-btn text-white font-semibold
-                       bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]">
+                       btn-gradient">
               关闭
             </button>
           </div>

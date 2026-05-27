@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
+import { useTheme, themeLabels, themeColors, type Theme } from '../contexts/ThemeContext';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { user, partner, logout } = useAuth();
   const { state, connected, lastSync, updateCoins } = useSync();
+  const { theme, setTheme } = useTheme();
+  const tc = themeColors[theme];
 
   if (!user || !partner) return null;
 
@@ -29,7 +32,7 @@ export default function ProfilePage() {
     localStorage.setItem('daily-coin-claimed', today);
     setClaimedToday(true);
     updateCoins(myCoins + 2);
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 }, colors: ['#FFC3A0', '#FFB3B3'] });
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 }, colors: [tc.accent, tc.primary] });
   };
 
   return (
@@ -114,6 +117,37 @@ export default function ProfilePage() {
           <span className="text-xl">💬</span>
           <span className="text-text-primary text-sm">关于恋爱补给站</span>
         </button>
+
+        {/* Theme Switcher */}
+        <div className="px-5 py-4 border-b border-apricot/30">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-xl">🎨</span>
+            <span className="text-text-primary text-sm">主题配色</span>
+            <span className="text-text-secondary text-xs ml-auto">{themeLabels[theme]}</span>
+          </div>
+          <div className="flex gap-3">
+            {(Object.keys(themeLabels) as Theme[]).map(t => {
+              const c = themeColors[t];
+              return (
+                <button
+                  key={t}
+                  onClick={() => setTheme(t)}
+                  className={`flex flex-col items-center gap-1.5 flex-1 py-2.5 rounded-xl transition-all
+                    ${theme === t ? 'bg-apricot ring-2 ring-blush/40' : 'hover:bg-apricot/30'}`}
+                >
+                  <div className="flex gap-0.5">
+                    <div className="w-4 h-4 rounded-full" style={{ background: c.primary }} />
+                    <div className="w-4 h-4 rounded-full" style={{ background: c.accent }} />
+                    <div className="w-4 h-4 rounded-full" style={{ background: c.blue }} />
+                    <div className="w-4 h-4 rounded-full" style={{ background: c.green }} />
+                  </div>
+                  <span className="text-xs text-text-secondary">{themeLabels[t]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <button onClick={logout}
           className="w-full flex items-center gap-3 px-5 py-4 hover:bg-red-50 transition-colors">
           <span className="text-xl">🚪</span>
