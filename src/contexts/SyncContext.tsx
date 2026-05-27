@@ -528,6 +528,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!user) return false;
     try {
       const blob = await compressImage(file);
+      const buf = await blob.arrayBuffer();
       const ts = Date.now();
       const rand = Math.random().toString(36).slice(2, 6);
       const objectKey = `photos/${user.id}/${ts}_${rand}.jpg`;
@@ -535,16 +536,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const resource = `/${bucket}/${objectKey}`;
 
       const expires = Math.floor(Date.now() / 1000) + 300;
-      const sig = await ossSign('PUT', 'image/jpeg', expires, resource);
+      const sig = await ossSign('PUT', '', expires, resource);
       const url = buildPhotoOssUrl(objectKey, sig, expires);
 
       const res = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'image/jpeg' },
-        body: blob,
+        body: buf,
       });
       if (!res.ok) {
-        console.error(`[sync:${user.id}] Photo upload HTTP ${res.status}`);
+        console.error(`[sync:${user.id}] Photo upload HTTP ${res.status}`, await res.text());
         return false;
       }
 
