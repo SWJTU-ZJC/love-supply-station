@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
-  const { state, lastSync, exportSyncCode, importSyncCode } = useSync();
+  const { state, connected, syncing, lastSync, exportSyncCode, importSyncCode } = useSync();
   const [showHearts, setShowHearts] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [importCode, setImportCode] = useState('');
@@ -92,9 +92,11 @@ export default function HomePage() {
       {/* Sync Bar */}
       <div className="rounded-card p-3 space-y-2 bg-white/90 border border-apricot/30 shadow-soft">
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${lastSync ? 'bg-mint' : 'bg-text-secondary/30'}`} />
+          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+            syncing ? 'bg-sunset animate-pulse' : connected ? 'bg-mint' : 'bg-red-300'
+          }`} />
           <span className="text-xs text-text-secondary flex-1">
-            {lastSync || '通过同步码交换数据'}
+            {syncing ? '同步中...' : connected ? lastSync ? `已同步 ${lastSync}` : '已连接' : lastSync ? `最后同步 ${lastSync}` : '等待连接...'}
           </span>
         </div>
         <div className="flex gap-2">

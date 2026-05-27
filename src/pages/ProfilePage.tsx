@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
   const { user, partner, logout } = useAuth();
-  const { state, lastSync } = useSync();
+  const { state, connected, lastSync } = useSync();
 
   if (!user || !partner) return null;
 
@@ -40,9 +40,9 @@ export default function ProfilePage() {
           <span className="text-text-secondary text-sm">当前心情</span>
         </div>
         <div className="flex items-center justify-center gap-2 mt-2">
-          <span className={`w-2 h-2 rounded-full ${lastSync ? 'bg-mint' : 'bg-text-secondary/30'}`} />
+          <span className={`w-2 h-2 rounded-full ${connected ? 'bg-mint' : 'bg-text-secondary/30'}`} />
           <span className="text-xs text-text-secondary">
-            {lastSync || '尚未同步'}
+            {connected ? (lastSync || '已连接') : '未连接'}
           </span>
         </div>
       </div>
