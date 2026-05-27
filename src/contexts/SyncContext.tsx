@@ -128,7 +128,7 @@ function loadLocal(): SharedState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed.littleThings?.length) return parsed;
+      return { ...getEmptyState(), ...parsed, littleThings: parsed.littleThings?.length ? parsed.littleThings : getDefaultLittleThings() };
     }
   } catch {}
   return { ...getEmptyState(), littleThings: getDefaultLittleThings() };
