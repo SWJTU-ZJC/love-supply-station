@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { deflate, inflate } from 'pako';
 
 // ========== Shared State Types ==========
 
@@ -32,7 +31,6 @@ export interface SharedState {
   littleThings: SharedLittleThing[];
   capsules: SharedCapsule[];
   messages: SharedMessage[];
-  wheelResults: { userId: string; result: string; timestamp: number; }[];
 }
 
 interface SyncContextType {
@@ -40,8 +38,6 @@ interface SyncContextType {
   connected: boolean;
   syncing: boolean;
   lastSync: string;
-  exportSyncCode: () => string;
-  importSyncCode: (code: string) => boolean;
   updateMood: (mood: string) => void;
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
@@ -54,7 +50,6 @@ interface SyncContextType {
   openCapsule: (id: string) => void;
   sendMessage: (content: string) => void;
   markMessageRead: (id: string) => void;
-  addWheelResult: (result: string) => void;
 }
 
 const SyncContext = createContext<SyncContextType | null>(null);
@@ -140,7 +135,7 @@ function getEmptyState(): SharedState {
   return {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
-    littleThings: [], capsules: [], messages: [], wheelResults: [],
+    littleThings: [], capsules: [], messages: [],
   };
 }
 
@@ -185,16 +180,6 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
-  const mergeWheel = (a: SharedState['wheelResults'], b: SharedState['wheelResults']) => {
-    const set = new Set<string>();
-    const result: SharedState['wheelResults'] = [];
-    [...b, ...a].forEach(x => {
-      const key = `${x.userId}-${x.timestamp}`;
-      if (!set.has(key)) { set.add(key); result.push(x); }
-    });
-    return result;
-  };
-
   return {
     version: Math.max(local.version, remote.version),
     moods: mergeByUserIdLatest(local.moods, remote.moods, x => x.updatedAt),
@@ -204,7 +189,6 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     littleThings: mergeById(local.littleThings, remote.littleThings),
     capsules: mergeById(local.capsules, remote.capsules),
     messages: mergeById(local.messages, remote.messages),
-    wheelResults: mergeWheel(local.wheelResults, remote.wheelResults),
   };
 }
 
@@ -219,37 +203,6 @@ function slimForSync(state: SharedState): SharedState {
       ? [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, maxPhotos)
       : state.photos,
   };
-}
-
-// ========== Sync code helpers (fallback) ==========
-
-function encodeState(state: SharedState): string {
-  const slim = slimForSync(state);
-  const json = JSON.stringify(slim);
-  const bytes = new TextEncoder().encode(json);
-  const compressed = deflate(bytes, { level: 9 });
-  let bin = '';
-  for (let i = 0; i < compressed.length; i++) bin += String.fromCharCode(compressed[i]);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function decodeState(code: string): SharedState | null {
-  try {
-    let b64 = code.replace(/-/g, '+').replace(/_/g, '/');
-    while (b64.length % 4) b64 += '=';
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const decompressed = inflate(bytes);
-    const json = new TextDecoder().decode(decompressed);
-    const parsed = JSON.parse(json);
-    if (typeof parsed.version === 'number' && Array.isArray(parsed.moods)) {
-      return parsed as SharedState;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 // ========== Provider ==========
@@ -475,29 +428,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     schedulePush();
   }, [schedulePush, uid]);
 
-  // ========== Sync code (fallback) ==========
-
-  const exportSyncCode = useCallback((): string => {
-    const code = encodeState(state);
-    const now = new Date();
-    setLastSync(`导出 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-    return code;
-  }, [state]);
-
-  const importSyncCode = useCallback((code: string): boolean => {
-    const remote = decodeState(code.trim());
-    if (!remote) return false;
-    setState(prev => {
-      const merged = mergeStates(prev, remote);
-      merged.version = Math.max(prev.version, remote.version) + 1;
-      saveLocal(merged);
-      return merged;
-    });
-    const now = new Date();
-    setLastSync(`导入 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-    return true;
-  }, []);
-
   // ========== Mutation methods ==========
 
   const updateMood = useCallback((mood: string) => {
@@ -597,21 +527,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }));
   }, [updateLocal]);
 
-  const addWheelResult = useCallback((result: string) => {
-    if (!user) return;
-    updateLocal(prev => ({
-      ...prev,
-      wheelResults: [...prev.wheelResults, { userId: user.id, result, timestamp: Date.now() }],
-    }));
-  }, [user, updateLocal]);
-
   return (
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
-      exportSyncCode, importSyncCode,
       updateMood, updateCoins, addCheckin, addPhoto, deletePhoto, uploadPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
-      sendMessage, markMessageRead, addWheelResult,
+      sendMessage, markMessageRead,
     }}>
       {children}
     </SyncContext.Provider>

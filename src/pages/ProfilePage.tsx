@@ -12,7 +12,6 @@ export default function ProfilePage() {
   const myMood = state.moods.find(m => m.userId === user.id)?.mood || user.mood;
   const partnerMood = state.moods.find(m => m.userId === partner.id)?.mood || partner.mood;
 
-  const wheelCount = state.wheelResults?.filter(r => r.userId === user.id).length || 0;
   const checkinCount = state.checkins?.filter(c => c.userId === user.id).length || 0;
   const doneCount = state.littleThings?.filter(t => t.isDone).length || 0;
   const msgCount = state.messages?.filter(m => m.fromUserId === user.id).length || 0;
@@ -64,11 +63,6 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-card p-4 shadow-soft text-center">
-          <div className="text-3xl mb-1">🎡</div>
-          <p className="text-xl font-bold text-blush">{wheelCount}</p>
-          <p className="text-text-secondary text-xs">转盘次数</p>
-        </div>
         <div className="bg-white rounded-card p-4 shadow-soft text-center">
           <div className="text-3xl mb-1">💌</div>
           <p className="text-xl font-bold text-sunset">{msgCount}</p>

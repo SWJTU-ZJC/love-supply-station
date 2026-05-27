@@ -8,13 +8,6 @@ export interface User {
   coupleCode: string;
 }
 
-export interface WheelOption {
-  id: string;
-  text: string;
-  icon: string;
-  type: string;
-}
-
 export interface GachaItem {
   id: string;
   name: string;

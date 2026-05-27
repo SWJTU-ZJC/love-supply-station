@@ -5,7 +5,6 @@ import HomePage from './pages/HomePage';
 import MapPage from './pages/MapPage';
 import TreeHolePage from './pages/TreeHolePage';
 import ProfilePage from './pages/ProfilePage';
-import WheelPage from './pages/WheelPage';
 import GachaPage from './pages/GachaPage';
 import LittleThingsPage from './pages/LittleThingsPage';
 import CapsulesPage from './pages/CapsulesPage';
@@ -24,7 +23,6 @@ export default function App() {
           <Route path="treehole" element={<TreeHolePage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
-        <Route path="/wheel" element={<AuthGuard><WheelPage /></AuthGuard>} />
         <Route path="/gacha" element={<AuthGuard><GachaPage /></AuthGuard>} />
         <Route path="/little-things" element={<AuthGuard><LittleThingsPage /></AuthGuard>} />
         <Route path="/capsules" element={<AuthGuard><CapsulesPage /></AuthGuard>} />

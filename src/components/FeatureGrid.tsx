@@ -2,14 +2,6 @@ import { useNavigate } from 'react-router-dom';
 
 const features = [
   {
-    title: '命运转盘',
-    icon: '🎡',
-    desc: '随机惊喜',
-    path: '/wheel',
-    gradient: 'from-blush/30 to-sunset/30',
-    emoji: '🎰',
-  },
-  {
     title: '恋爱扭蛋机',
     icon: '🎪',
     desc: '消耗金币抽奖',
