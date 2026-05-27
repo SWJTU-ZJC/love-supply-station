@@ -4,13 +4,13 @@ import { useSync } from '../contexts/SyncContext';
 
 export default function MoviePage() {
   const { user, partner } = useAuth();
-  const { state, uploadPhoto } = useSync();
+  const { state, uploadPhoto, deletePhoto } = useSync();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef('');
   const [uploading, setUploading] = useState(false);
   const [caption, setCaption] = useState('');
   const [showUpload, setShowUpload] = useState(false);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<{ url: string; id: string } | null>(null);
   const [error, setError] = useState('');
 
   const photos = state.photos || [];
@@ -134,22 +134,39 @@ export default function MoviePage() {
           {sorted.map(photo => (
             <div
               key={photo.id}
-              onClick={() => setLightbox(getUrl(photo))}
               className="relative aspect-square rounded-xl overflow-hidden shadow-soft
-                       cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+                       cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform group"
             >
               <img
                 src={getUrl(photo)}
                 alt={photo.caption || ''}
                 loading="lazy"
                 className="w-full h-full object-cover"
+                onClick={() => setLightbox({ url: getUrl(photo), id: photo.id })}
               />
+              {photo.userId === user?.id && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('确定要删除这张照片吗？')) {
+                      deletePhoto(photo.id);
+                      setLightbox(null);
+                    }
+                  }}
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/40 text-white
+                           flex items-center justify-center text-xs opacity-0 group-hover:opacity-100
+                           hover:bg-red-500 transition-all z-10"
+                >
+                  ✕
+                </button>
+              )}
               {photo.caption && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2"
+                     onClick={() => setLightbox({ url: getUrl(photo), id: photo.id })}>
                   <p className="text-white text-xs truncate">{photo.caption}</p>
                 </div>
               )}
-              <div className="absolute top-1 left-1">
+              <div className="absolute top-1 left-1" onClick={() => setLightbox({ url: getUrl(photo), id: photo.id })}>
                 <span className="text-xs bg-black/30 text-white rounded-full px-2 py-0.5">
                   {photo.userId === user?.id ? '我' : partner?.nickname || 'TA'}
                 </span>
@@ -171,8 +188,23 @@ export default function MoviePage() {
           >
             ✕
           </button>
+          {photos.find(p => p.id === lightbox.id)?.userId === user?.id && (
+            <button
+              onClick={() => {
+                if (confirm('确定要删除这张照片吗？')) {
+                  deletePhoto(lightbox.id);
+                  setLightbox(null);
+                }
+              }}
+              className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 px-6 py-2.5
+                       bg-red-500/90 text-white text-sm font-semibold rounded-full
+                       hover:bg-red-600 active:scale-95 transition-all"
+            >
+              删除照片
+            </button>
+          )}
           <img
-            src={lightbox}
+            src={lightbox.url}
             alt=""
             className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-soft-lg"
             onClick={e => e.stopPropagation()}

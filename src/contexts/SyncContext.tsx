@@ -46,6 +46,7 @@ interface SyncContextType {
   updateCoins: (coins: number) => void;
   addCheckin: (c: Omit<SharedCheckin, 'id'>) => void;
   addPhoto: (p: SharedPhoto) => void;
+  deletePhoto: (id: string) => void;
   uploadPhoto: (file: File, caption: string) => Promise<boolean>;
   toggleLittleThing: (id: string) => void;
   addLittleThing: (t: Omit<SharedLittleThing, 'id'>) => void;
@@ -91,7 +92,7 @@ function buildOssUrl(sig: string, expires: number): string {
 
 // ========== Image compression (to base64 data URL) ==========
 
-function compressToDataUrl(file: File, maxW: number = 600, quality: number = 0.5): Promise<string> {
+function compressToDataUrl(file: File, maxW: number = 1920, quality: number = 0.85): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -524,6 +525,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     updateLocal(prev => ({ ...prev, photos: [...prev.photos, p] }));
   }, [updateLocal]);
 
+  const deletePhoto = useCallback((id: string) => {
+    updateLocal(prev => ({ ...prev, photos: prev.photos.filter(p => p.id !== id) }));
+  }, [updateLocal]);
+
   const uploadPhoto = useCallback(async (file: File, caption: string): Promise<boolean> => {
     if (!user) return false;
     try {
@@ -604,7 +609,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
       exportSyncCode, importSyncCode,
-      updateMood, updateCoins, addCheckin, addPhoto, uploadPhoto,
+      updateMood, updateCoins, addCheckin, addPhoto, deletePhoto, uploadPhoto,
       toggleLittleThing, addLittleThing, addCapsule, openCapsule,
       sendMessage, markMessageRead, addWheelResult,
     }}>
