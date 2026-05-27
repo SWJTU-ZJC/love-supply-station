@@ -194,9 +194,12 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 
 function slimForSync(state: SharedState): SharedState {
   const maxPhotos = 25;
+  const maxCheckins = 50;
+  const sortedCheckins = [...state.checkins].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const trimmedCheckins = sortedCheckins.slice(0, maxCheckins);
   return {
     ...state,
-    checkins: state.checkins.map(c => ({ ...c, imageUrl: '' })),
+    checkins: trimmedCheckins,
     photos: state.photos.length > maxPhotos
       ? [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, maxPhotos)
       : state.photos,

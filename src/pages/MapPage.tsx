@@ -1,104 +1,205 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import L from 'leaflet';
 import confetti from 'canvas-confetti';
 
+function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxW) { height = Math.round(height * maxW / width); width = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('Canvas unavailable')); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export default function MapPage() {
   const { user, partner } = useAuth();
-  const { state, addCheckin } = useSync();
+  const { state, addCheckin, updateCoins } = useSync();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
   const [selectedCheckin, setSelectedCheckin] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [newNote, setNewNote] = useState('');
-  const [pendingPos, setPendingPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [gpsPos, setGpsPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsErr, setGpsErr] = useState('');
   const markersRef = useRef<L.Marker[]>([]);
 
   const checkins = state.checkins || [];
+  const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 50;
+
+  const getPos = useCallback(() => {
+    setGpsErr('');
+    if (!navigator.geolocation) {
+      setGpsErr('设备不支持定位');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setGpsPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGpsErr('');
+      },
+      () => setGpsErr('定位失败，请检查权限'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
+  }, []);
+
+  useEffect(() => {
+    getPos();
+  }, [getPos]);
 
   useEffect(() => {
     if (viewMode !== 'map' || !mapContainerRef.current) return;
 
     if (mapRef.current) {
       mapRef.current.invalidateSize();
-      // Clear existing markers
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
-      // Re-add markers
-      checkins.forEach(c => addMarkerToMap(mapRef.current!, c));
+      checkins.forEach(c => addMarker(mapRef.current!, c));
       return;
     }
 
-    const map = L.map(mapContainerRef.current).setView([31.2304, 121.4737], 13);
+    const defaultCenter: [number, number] = gpsPos
+      ? [gpsPos.lat, gpsPos.lng]
+      : [31.2304, 121.4737];
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    const map = L.map(mapContainerRef.current).setView(defaultCenter, 14);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
 
-    checkins.forEach(c => addMarkerToMap(map, c));
-
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      setPendingPos({ lat: e.latlng.lat, lng: e.latlng.lng });
-      setShowForm(true);
-    });
-
+    checkins.forEach(c => addMarker(map, c));
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
-  }, [viewMode, checkins]);
+  }, [viewMode, checkins, gpsPos]);
 
-  const addMarkerToMap = (map: L.Map, checkin: any) => {
+  const addMarker = (map: L.Map, checkin: any) => {
+    const isMine = checkin.userId === user?.id;
+    const emoji = isMine ? user?.avatar || '🐰' : partner?.avatar || '🐻';
     const icon = L.divIcon({
-      className: 'custom-marker',
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
+      html: `<div style="
+        width:36px;height:36px;border-radius:50%;
+        background:${isMine ? '#FFB3B3' : '#A0C4FF'};
+        display:flex;align-items:center;justify-content:center;
+        font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.15);
+        border:2px solid white;
+      ">${emoji}</div>`,
+      className: '',
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
     });
     const marker = L.marker([checkin.latitude, checkin.longitude], { icon }).addTo(map);
     marker.bindPopup(`
       <div style="font-family: system-ui; padding: 8px; max-width: 200px;">
-        ${checkin.imageUrl ? `<img src="${checkin.imageUrl}" style="width:100%; border-radius:8px; margin-bottom:8px;" />` : ''}
+        ${checkin.imageUrl ? `<img src="${checkin.imageUrl}" style="width:100%; border-radius:8px; margin-bottom:6px;" />` : ''}
         <p style="margin:0 0 4px; color:#4A3F3F; font-size:14px;">${checkin.note}</p>
-        <p style="margin:0; color:#9E8F8F; font-size:12px;">${checkin.createdAt}</p>
+        <p style="margin:0; color:#9E8F8F; font-size:11px;">${checkin.createdAt} · ${isMine ? '我' : partner?.nickname}</p>
       </div>
     `);
     marker.on('click', () => setSelectedCheckin(checkin));
     markersRef.current.push(marker);
   };
 
-  const handleAddCheckin = () => {
-    if (!pendingPos || !newNote.trim() || !user) return;
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleCheckin = async () => {
+    if (!gpsPos || !newNote.trim() || !user) return;
+    setUploading(true);
+
+    let imageUrl = '';
+    if (photoFile) {
+      try {
+        imageUrl = await compressToDataUrl(photoFile);
+      } catch (e) {
+        console.error('[map] photo compress error:', e);
+      }
+    }
+
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     addCheckin({
       userId: user.id,
-      latitude: pendingPos.lat,
-      longitude: pendingPos.lng,
-      imageUrl: '',
+      latitude: gpsPos.lat,
+      longitude: gpsPos.lng,
+      imageUrl,
       note: newNote.trim(),
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: ts,
     });
-    setNewNote('');
-    setShowForm(false);
-    setPendingPos(null);
+
+    updateCoins(myCoins + 2);
     confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 }, colors: ['#FFB3B3', '#A0C4FF'] });
+
+    setNewNote('');
+    setPhotoFile(null);
+    setPhotoPreview('');
+    setShowForm(false);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
     <div className="relative h-[calc(100vh-5rem)]">
+      {/* View toggle */}
       <button
         onClick={() => setViewMode(v => v === 'map' ? 'list' : 'map')}
         className="absolute top-4 right-4 z-[1000] bg-white rounded-full px-4 py-2
-                 shadow-soft text-sm font-semibold text-text-primary hover:shadow-soft-lg transition-all"
+                   shadow-soft text-sm font-semibold text-text-primary hover:shadow-soft-lg transition-all"
       >
         {viewMode === 'map' ? '📋 列表' : '🗺️ 地图'}
       </button>
 
+      {/* GPS status + coins */}
+      <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2">
+        <div className="bg-white rounded-full px-3 py-1.5 shadow-soft flex items-center gap-2 text-sm">
+          <span className={`w-2 h-2 rounded-full ${gpsPos ? 'bg-mint' : 'bg-red-400 animate-pulse'}`} />
+          <span className="text-text-secondary text-xs">{gpsPos ? '已定位' : gpsErr || '定位中...'}</span>
+        </div>
+        <div className="bg-white rounded-full px-3 py-1.5 shadow-soft text-sm">
+          <span className="text-text-secondary text-xs">🪙 {myCoins}</span>
+        </div>
+      </div>
+
       {viewMode === 'map' ? (
-        <div ref={mapContainerRef} className="w-full h-full" />
+        <>
+          <div ref={mapContainerRef} className="w-full h-full" />
+
+          {/* Check-in button */}
+          <button
+            onClick={() => { getPos(); setShowForm(true); }}
+            disabled={!gpsPos}
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000]
+                     px-6 py-3 rounded-full shadow-soft-lg text-white font-semibold
+                     bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]
+                     disabled:opacity-40 hover:shadow-xl active:scale-95 transition-all"
+          >
+            📍 在此打卡 +2🪙
+          </button>
+        </>
       ) : (
         <div className="px-4 py-4 space-y-3 overflow-y-auto h-full">
-          <h2 className="font-title text-2xl text-text-primary mb-4">📸 记忆时间线</h2>
+          <h2 className="font-title text-2xl text-text-primary mb-4">📸 我们的足迹</h2>
           {[...checkins].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(c => (
             <div key={c.id} className="bg-white rounded-card p-4 shadow-soft">
               <div className="flex items-start gap-3">
@@ -111,22 +212,69 @@ export default function MapPage() {
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-text-secondary">{c.createdAt}</span>
-                    <span className="text-xs text-blush">
-                      {c.userId === user?.id ? '我' : partner?.nickname} 打卡
+                    <span className="text-xs px-1.5 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: c.userId === user?.id ? '#FFB3B340' : '#A0C4FF40',
+                            color: '#4A3F3F',
+                          }}>
+                      {c.userId === user?.id ? '我' : partner?.nickname}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           ))}
+          {checkins.length === 0 && (
+            <div className="text-center py-16 text-text-secondary">
+              <span className="text-5xl block mb-3">🗺️</span>
+              <p className="font-semibold">还没有打卡记录</p>
+              <p className="text-sm mt-1">一起去哪里玩的时候就打卡吧~</p>
+            </div>
+          )}
         </div>
       )}
 
-      {showForm && pendingPos && (
-        <div className="fixed inset-0 z-[2000] flex items-end justify-center pointer-events-none">
-          <div className="w-full max-w-app bg-white rounded-t-card shadow-soft-lg p-5 pointer-events-auto
-                        animate-[fadeSlideIn_0.3s_ease-out]">
-            <h3 className="font-semibold text-text-primary mb-3">在这里打卡 📍</h3>
+      {/* Check-in form modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-[2000] flex items-end justify-center"
+             onClick={() => setShowForm(false)}>
+          <div className="w-full max-w-app bg-white rounded-t-card shadow-soft-lg p-5
+                        animate-[fadeSlideIn_0.3s_ease-out]"
+               onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-text-primary mb-3">
+              📍 {gpsPos ? `当前位置打卡` : '定位中...'} +2🪙
+            </h3>
+
+            {/* Photo preview */}
+            {photoPreview && (
+              <div className="relative mb-3 inline-block">
+                <img src={photoPreview} alt="" className="w-24 h-24 rounded-xl object-cover" />
+                <button
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-black/50 text-white
+                           flex items-center justify-center text-xs"
+                >✕</button>
+              </div>
+            )}
+
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 rounded-btn bg-apricot/50 text-text-secondary text-sm
+                         hover:bg-apricot transition-colors"
+              >
+                📷 {photoFile ? '更换照片' : '添加照片'}
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                className="absolute left-0 top-0 w-0 h-0 opacity-0 pointer-events-none"
+              />
+            </div>
+
             <textarea
               value={newNote}
               onChange={e => setNewNote(e.target.value)}
@@ -136,18 +284,23 @@ export default function MapPage() {
               autoFocus
             />
             <div className="flex gap-3">
-              <button onClick={() => { setShowForm(false); setPendingPos(null); }}
-                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold">取消</button>
-              <button onClick={handleAddCheckin} disabled={!newNote.trim()}
+              <button
+                onClick={() => { setShowForm(false); setPhotoFile(null); setPhotoPreview(''); }}
+                className="flex-1 py-3 rounded-btn bg-apricot text-text-primary font-semibold"
+              >取消</button>
+              <button
+                onClick={handleCheckin}
+                disabled={!newNote.trim() || !gpsPos || uploading}
                 className="flex-1 py-3 rounded-btn text-white font-semibold
                          bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)] disabled:opacity-50">
-                记录 💕
+                {uploading ? '上传中...' : '打卡 💕'}
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* Detail modal */}
       {selectedCheckin && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[2000] p-4"
              onClick={() => setSelectedCheckin(null)}>
@@ -157,7 +310,16 @@ export default function MapPage() {
               <img src={selectedCheckin.imageUrl} alt="" className="w-full h-48 object-cover rounded-xl mb-4" />
             )}
             <p className="text-text-primary text-base mb-2">{selectedCheckin.note}</p>
-            <p className="text-text-secondary text-sm">{selectedCheckin.createdAt}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-text-secondary text-sm">{selectedCheckin.createdAt}</p>
+              <span className="text-xs px-1.5 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: selectedCheckin.userId === user?.id ? '#FFB3B340' : '#A0C4FF40',
+                      color: '#4A3F3F',
+                    }}>
+                {selectedCheckin.userId === user?.id ? '我' : partner?.nickname}
+              </span>
+            </div>
             <button onClick={() => setSelectedCheckin(null)}
               className="mt-4 w-full py-3 rounded-btn text-white font-semibold
                        bg-[radial-gradient(circle_at_30%_30%,#FFB3B3,#FFC3A0)]">
