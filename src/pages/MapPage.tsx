@@ -77,13 +77,18 @@ export default function MapPage() {
       ? [gpsPos.lat, gpsPos.lng]
       : [31.2304, 121.4737];
 
-    const map = L.map(mapContainerRef.current).setView(defaultCenter, 14);
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+    }).setView(defaultCenter, 14);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-      subdomains: 'abcd',
-      maxZoom: 19,
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+      subdomains: ['1', '2', '3', '4'],
+      maxZoom: 18,
     }).addTo(map);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.control.attribution({ position: 'bottomleft', prefix: '© 高德地图' }).addTo(map);
 
     checkins.forEach(c => addMarker(map, c));
     mapRef.current = map;
@@ -95,15 +100,16 @@ export default function MapPage() {
     const emoji = isMine ? user?.avatar || '🐰' : partner?.avatar || '🐻';
     const icon = L.divIcon({
       html: `<div style="
-        width:36px;height:36px;border-radius:50%;
+        width:40px;height:40px;border-radius:50%;
         background:${isMine ? '#FFB3B3' : '#A0C4FF'};
         display:flex;align-items:center;justify-content:center;
-        font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.15);
-        border:2px solid white;
+        font-size:22px;
+        border:3px solid white;
+        box-shadow:0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
       ">${emoji}</div>`,
-      className: '',
-      iconSize: [36, 36],
-      iconAnchor: [18, 18],
+      className: 'checkin-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
     });
     const marker = L.marker([checkin.latitude, checkin.longitude], { icon }).addTo(map);
     marker.bindPopup(`
