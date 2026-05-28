@@ -139,12 +139,12 @@ function saveLocal(state: SharedState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    console.warn('[sync] localStorage full, trimming photos...');
-    const sortedPhotos = [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 10);
+    console.warn('[sync] localStorage full, stripping checkin images...');
     const slimCheckins = state.checkins.map((c: any) => ({ ...c, imageUrl: '' }));
-    const slim = { ...state, photos: sortedPhotos, checkins: slimCheckins };
+    const slim = { ...state, checkins: slimCheckins };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(slim)); } catch {
-      const mini = { ...state, photos: sortedPhotos.slice(0, 3), checkins: slimCheckins.slice(-10) };
+      console.warn('[sync] still full, trimming oldest checkins...');
+      const mini = { ...slim, checkins: slimCheckins.slice(-20) };
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(mini)); } catch {}
     }
   }
@@ -219,16 +219,12 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
 // ========== Sync state strip ==========
 
 function slimForSync(state: SharedState): SharedState {
-  const maxPhotos = 50;
   const maxCheckins = 50;
   const sortedCheckins = [...state.checkins].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const trimmedCheckins = sortedCheckins.slice(0, maxCheckins);
   return {
     ...state,
     checkins: trimmedCheckins,
-    photos: state.photos.length > maxPhotos
-      ? [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, maxPhotos)
-      : state.photos,
   };
 }
 
