@@ -120,9 +120,63 @@ function compressToDataUrl(file: File, maxW: number = 1920, quality: number = 0.
 
 interface CachedUrl { url: string; expiresAt: number; }
 
-// ========== localStorage helpers ==========
+// ========== IndexedDB photo storage ==========
+
+const DB_NAME = 'love-supply-db';
+const DB_VERSION = 1;
+const PHOTO_STORE = 'photos';
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(PHOTO_STORE)) {
+        req.result.createObjectStore(PHOTO_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function loadPhotosFromDB(): Promise<SharedPhoto[]> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, 'readonly');
+      const store = tx.objectStore(PHOTO_STORE);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+      tx.oncomplete = () => db.close();
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function savePhotosToDB(photos: SharedPhoto[]): Promise<void> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, 'readwrite');
+      const store = tx.objectStore(PHOTO_STORE);
+      store.clear();
+      for (const p of photos) store.put(p);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); resolve(); };
+    });
+  } catch {}
+}
+
+// ========== localStorage helpers (state without photos) ==========
 
 const STORAGE_KEY = 'love-supply-data';
+const MIGRATED_KEY = 'love-supply-idb-migrated';
+
+function stateWithoutPhotos(state: SharedState): Omit<SharedState, 'photos'> & { photos: never[] } {
+  return { ...state, photos: [] };
+}
 
 function loadLocal(): SharedState {
   try {
@@ -136,16 +190,15 @@ function loadLocal(): SharedState {
 }
 
 function saveLocal(state: SharedState) {
+  const noPhotos = stateWithoutPhotos(state);
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(noPhotos));
   } catch {
     console.warn('[sync] localStorage full, stripping checkin images...');
-    const slimCheckins = state.checkins.map((c: any) => ({ ...c, imageUrl: '' }));
-    const slim = { ...state, checkins: slimCheckins };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(slim)); } catch {
+    const slimCheckins = noPhotos.checkins.map((c: any) => ({ ...c, imageUrl: '' }));
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...noPhotos, checkins: slimCheckins })); } catch {
       console.warn('[sync] still full, trimming oldest checkins...');
-      const mini = { ...slim, checkins: slimCheckins.slice(-20) };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(mini)); } catch {}
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...noPhotos, checkins: slimCheckins.slice(-20) })); } catch {}
     }
   }
 }
@@ -246,6 +299,40 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const initDoneRef = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // ========== IndexedDB: migrate + load photos on mount ==========
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      let photos = await loadPhotosFromDB();
+      if (photos.length === 0) {
+        // First run: migrate photos from localStorage to IndexedDB
+        const local = loadLocal();
+        if (local.photos.length > 0) {
+          console.log(`[sync] migrating ${local.photos.length} photos from localStorage to IndexedDB`);
+          photos = local.photos;
+          await savePhotosToDB(photos);
+          localStorage.setItem(MIGRATED_KEY, '1');
+          // Clear photos from localStorage now that they're in IndexedDB
+          saveLocal({ ...local, photos: [] });
+        }
+      }
+      if (!mounted) return;
+      if (photos.length > 0) {
+        setState(prev => {
+          const merged = { ...prev, photos: [...photos, ...prev.photos.filter(p => !photos.some(mp => mp.id === p.id))] };
+          return merged;
+        });
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Save photos to IndexedDB whenever they change
+  useEffect(() => {
+    savePhotosToDB(state.photos);
+  }, [state.photos]);
 
   const uid = user?.id || '?';
 
