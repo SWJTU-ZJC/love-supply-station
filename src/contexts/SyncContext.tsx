@@ -31,6 +31,8 @@ export interface SharedState {
   photos: SharedPhoto[];
   littleThings: SharedLittleThing[];
   gachaItems: SharedGachaItem[];
+  deletedPhotoIds: string[];
+  deletedCheckinIds: string[];
 }
 
 interface SyncContextType {
@@ -125,8 +127,14 @@ function saveLocal(state: SharedState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
-    const slim = { ...state, photos: state.photos.slice(-5), checkins: state.checkins.map((c: any) => ({ ...c, imageUrl: '' })) };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(slim)); } catch {}
+    console.warn('[sync] localStorage full, trimming photos...');
+    const sortedPhotos = [...state.photos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 10);
+    const slimCheckins = state.checkins.map((c: any) => ({ ...c, imageUrl: '' }));
+    const slim = { ...state, photos: sortedPhotos, checkins: slimCheckins };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(slim)); } catch {
+      const mini = { ...state, photos: sortedPhotos.slice(0, 3), checkins: slimCheckins.slice(-10) };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(mini)); } catch {}
+    }
   }
 }
 
@@ -135,6 +143,7 @@ function getEmptyState(): SharedState {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
     littleThings: [], gachaItems: [],
+    deletedPhotoIds: [], deletedCheckinIds: [],
   };
 }
 
@@ -157,9 +166,6 @@ function getDefaultLittleThings(): SharedLittleThing[] {
 
 function mergeStates(local: SharedState, remote: SharedState): SharedState {
   const safe = (arr: any[]) => arr || [];
-  const mergeRemoteWins = <T extends { id: string }>(_local: T[], remoteArr: T[]) => {
-    return [...safe(remoteArr)];
-  };
   const mergeById = <T extends { id: string }>(a: T[], b: T[]) => {
     const map = new Map<string, T>();
     safe(a).forEach(x => map.set(x.id, x));
@@ -181,21 +187,26 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     return Array.from(map.entries()).map(([userId, coins]) => ({ userId, coins }));
   };
 
+  const deletedPhotos = new Set([...safe(local.deletedPhotoIds), ...safe(remote.deletedPhotoIds)]);
+  const deletedCheckins = new Set([...safe(local.deletedCheckinIds), ...safe(remote.deletedCheckinIds)]);
+
   return {
     version: Math.max(local.version, remote.version),
     moods: mergeByUserIdLatest(local.moods, remote.moods, x => x.updatedAt),
     coins: mergeCoins(local.coins, remote.coins),
-    checkins: mergeRemoteWins(local.checkins, remote.checkins),
-    photos: mergeRemoteWins(local.photos, remote.photos),
+    checkins: mergeById(local.checkins, remote.checkins).filter(c => !deletedCheckins.has(c.id)),
+    photos: mergeById(local.photos, remote.photos).filter(p => !deletedPhotos.has(p.id)),
     littleThings: mergeById(local.littleThings, remote.littleThings),
-    gachaItems: mergeRemoteWins(local.gachaItems, remote.gachaItems),
+    gachaItems: mergeById(local.gachaItems, remote.gachaItems),
+    deletedPhotoIds: [...deletedPhotos],
+    deletedCheckinIds: [...deletedCheckins],
   };
 }
 
 // ========== Sync state strip ==========
 
 function slimForSync(state: SharedState): SharedState {
-  const maxPhotos = 25;
+  const maxPhotos = 50;
   const maxCheckins = 50;
   const sortedCheckins = [...state.checkins].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const trimmedCheckins = sortedCheckins.slice(0, maxCheckins);
@@ -353,6 +364,24 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       const { state: remote, etag } = result;
 
       if (etag === etagRef.current) return;
+
+      if (!initDoneRef.current) {
+        initDoneRef.current = true;
+        const current = stateRef.current;
+        const merged = mergeStates(current, remote);
+        merged.version = Math.max(current.version, remote.version) + 1;
+        console.log(`[sync:${uid}] INIT merge+push local v${current.version} + remote v${remote.version}`);
+        const newEtag = await pushRemote(merged, etag);
+        if (newEtag) {
+          etagRef.current = newEtag;
+          setState(merged);
+          saveLocal(merged);
+          const now = new Date();
+          setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+          return;
+        }
+      }
+
       etagRef.current = etag;
 
       setState(prev => {
@@ -458,7 +487,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [updateLocal]);
 
   const deleteCheckin = useCallback((id: string) => {
-    updateLocal(prev => ({ ...prev, checkins: prev.checkins.filter(c => c.id !== id) }));
+    updateLocal(prev => ({
+      ...prev,
+      checkins: prev.checkins.filter(c => c.id !== id),
+      deletedCheckinIds: [...prev.deletedCheckinIds, id],
+    }));
   }, [updateLocal]);
 
   const addPhoto = useCallback((p: SharedPhoto) => {
@@ -466,7 +499,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, [updateLocal]);
 
   const deletePhoto = useCallback((id: string) => {
-    updateLocal(prev => ({ ...prev, photos: prev.photos.filter(p => p.id !== id) }));
+    updateLocal(prev => ({
+      ...prev,
+      photos: prev.photos.filter(p => p.id !== id),
+      deletedPhotoIds: [...prev.deletedPhotoIds, id],
+    }));
   }, [updateLocal]);
 
   const uploadPhoto = useCallback(async (file: File, caption: string): Promise<boolean> => {
