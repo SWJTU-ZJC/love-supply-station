@@ -22,6 +22,14 @@ export interface SharedGachaItem {
   obtainedAt: number;
   used: boolean;
 }
+export interface SharedAnniversary {
+  id: string;
+  title: string;
+  date: string;
+  type: 'anniversary' | 'birthday' | 'memory';
+  year?: number;
+  createdAt: number;
+}
 
 export interface SharedState {
   version: number;
@@ -31,6 +39,7 @@ export interface SharedState {
   photos: SharedPhoto[];
   littleThings: SharedLittleThing[];
   gachaItems: SharedGachaItem[];
+  anniversaries: SharedAnniversary[];
   deletedPhotoIds: string[];
   deletedCheckinIds: string[];
 }
@@ -51,6 +60,9 @@ interface SyncContextType {
   addLittleThing: (t: Omit<SharedLittleThing, 'id'>) => void;
   addGachaItem: (item: Omit<SharedGachaItem, 'id' | 'userId' | 'obtainedAt' | 'used'>) => void;
   useGachaItem: (id: string) => void;
+  addAnniversary: (a: Omit<SharedAnniversary, 'id' | 'createdAt'>) => void;
+  updateAnniversary: (id: string, updates: Partial<Pick<SharedAnniversary, 'title' | 'date' | 'type' | 'year'>>) => void;
+  deleteAnniversary: (id: string) => void;
 }
 
 const SyncContext = createContext<SyncContextType | null>(null);
@@ -142,7 +154,7 @@ function getEmptyState(): SharedState {
   return {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
-    littleThings: [], gachaItems: [],
+    littleThings: [], gachaItems: [], anniversaries: [],
     deletedPhotoIds: [], deletedCheckinIds: [],
   };
 }
@@ -198,6 +210,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     photos: mergeById(local.photos, remote.photos).filter(p => !deletedPhotos.has(p.id)),
     littleThings: mergeById(local.littleThings, remote.littleThings),
     gachaItems: mergeById(local.gachaItems, remote.gachaItems),
+    anniversaries: mergeById(local.anniversaries, remote.anniversaries),
     deletedPhotoIds: [...deletedPhotos],
     deletedCheckinIds: [...deletedCheckins],
   };
@@ -570,12 +583,38 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }));
   }, [updateLocal]);
 
+  const addAnniversary = useCallback((a: Omit<SharedAnniversary, 'id' | 'createdAt'>) => {
+    const item: SharedAnniversary = {
+      ...a,
+      id: Date.now().toString() + Math.random().toString(36).slice(2, 6),
+      createdAt: Date.now(),
+    };
+    updateLocal(prev => ({ ...prev, anniversaries: [...prev.anniversaries, item] }));
+  }, [updateLocal]);
+
+  const updateAnniversary = useCallback((id: string, updates: Partial<Pick<SharedAnniversary, 'title' | 'date' | 'type' | 'year'>>) => {
+    updateLocal(prev => ({
+      ...prev,
+      anniversaries: prev.anniversaries.map(a =>
+        a.id === id ? { ...a, ...updates } : a
+      ),
+    }));
+  }, [updateLocal]);
+
+  const deleteAnniversary = useCallback((id: string) => {
+    updateLocal(prev => ({
+      ...prev,
+      anniversaries: prev.anniversaries.filter(a => a.id !== id),
+    }));
+  }, [updateLocal]);
+
   return (
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
       updateMood, updateCoins, addCheckin, deleteCheckin, addPhoto, deletePhoto, uploadPhoto,
       toggleLittleThing, addLittleThing,
       addGachaItem, useGachaItem,
+      addAnniversary, updateAnniversary, deleteAnniversary,
     }}>
       {children}
     </SyncContext.Provider>

@@ -2,8 +2,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 const tabs = [
   { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒' },
+  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝' },
   { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️' },
-  { path: '/profile', label: '我的', icon: '💝', activeIcon: '❤️' },
+  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️' },
 ];
 
 export default function TabBar() {

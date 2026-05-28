@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
+import { getDaysUntil } from './AnniversaryPage';
 import MoodBar from '../components/MoodBar';
 import DailyPhotoStrip from '../components/DailyPhotoStrip';
 import FeatureGrid from '../components/FeatureGrid';
@@ -13,6 +15,21 @@ export default function HomePage() {
   const { theme } = useTheme();
   const tc = themeColors[theme];
   const [showHearts, setShowHearts] = useState(false);
+  const navigate = useNavigate();
+
+  const upcomingAnniversary = useMemo(() => {
+    const list = state.anniversaries || [];
+    let closest: { title: string; daysLeft: number } | null = null;
+    for (const a of list) {
+      const days = getDaysUntil(a.date);
+      if (days >= 0 && days <= 7) {
+        if (!closest || days < closest.daysLeft) {
+          closest = { title: a.title, daysLeft: days };
+        }
+      }
+    }
+    return closest;
+  }, [state.anniversaries]);
 
   const myMood = state.moods.find(m => m.userId === user?.id)?.mood || user?.mood || '😊';
   const partnerMood = state.moods.find(m => m.userId === partner?.id)?.mood || partner?.mood || '😊';
@@ -51,6 +68,30 @@ export default function HomePage() {
         </div>
         <p className="text-text-secondary text-xs mt-0.5">💕 恋爱补给站 💕</p>
       </div>
+
+      {/* Upcoming anniversary banner */}
+      {upcomingAnniversary && (
+        <div
+          className="bg-gradient-to-r from-blush/20 to-sunset/20 rounded-card px-4 py-3
+                    flex items-center gap-3 shadow-soft cursor-pointer
+                    animate-[fadeSlideIn_0.3s_ease-out]"
+          onClick={() => navigate('/anniversary')}
+        >
+          <span className="text-2xl">
+            {upcomingAnniversary.daysLeft === 0 ? '🎉' : '📅'}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-text-primary">{upcomingAnniversary.title}</p>
+            <p className="text-xs text-text-secondary">
+              {upcomingAnniversary.daysLeft === 0
+                ? '就是今天！'
+                : `还有 ${upcomingAnniversary.daysLeft} 天`
+              }
+            </p>
+          </div>
+          <span className="text-text-secondary text-lg">→</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between mt-1">
         <p className="text-text-secondary text-xs">
