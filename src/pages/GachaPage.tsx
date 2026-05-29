@@ -229,10 +229,59 @@ export default function GachaPage() {
                           }`}>
               <div className={`absolute top-0 w-full h-32 rounded-t-card ${isAnimal ? 'bg-white/20' : 'bg-gradient-to-b from-blush/10 to-transparent'}`} />
               <div className="relative z-10 mb-4">
-                {spinning ? (
-                  <div className={`text-6xl animate-[shake_0.1s_ease-in-out_infinite] ${isAnimal ? 'drop-shadow-[0_3px_3px_rgba(61,52,40,0.2)]' : ''}`}>🥚</div>
+                {isAnimal ? (
+                  /* CSS Gacha Machine with glass dome */
+                  <div className="relative flex flex-col items-center">
+                    {/* Glass dome */}
+                    <div className={`relative w-36 h-28 overflow-hidden rounded-t-full border-[3px] border-white/50 bg-white/15`}
+                         style={{ borderBottom: 'none' }}>
+                      {/* Capsules inside dome */}
+                      {[
+                        { color: '#f8a6b2', x: 8, y: 10, size: 12, delay: 0 },
+                        { color: '#82d5bb', x: 30, y: 5, size: 14, delay: 0.3 },
+                        { color: '#f7cd67', x: 55, y: 15, size: 11, delay: 0.6 },
+                        { color: '#b77dee', x: 75, y: 3, size: 13, delay: 0.9 },
+                        { color: '#889df0', x: 95, y: 12, size: 10, delay: 1.2 },
+                        { color: '#e59266', x: 110, y: 6, size: 14, delay: 1.5 },
+                        { color: '#f8a6b2', x: 20, y: 40, size: 12, delay: 0.2 },
+                        { color: '#f7cd67', x: 50, y: 38, size: 13, delay: 0.5 },
+                        { color: '#b77dee', x: 80, y: 42, size: 11, delay: 0.8 },
+                        { color: '#82d5bb', x: 100, y: 35, size: 12, delay: 1.1 },
+                      ].map((capsule, i) => (
+                        <div
+                          key={i}
+                          className={`absolute rounded-full border-2 border-white/60 ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
+                          style={{
+                            background: `radial-gradient(circle at 40% 35%, ${capsule.color}99, ${capsule.color})`,
+                            width: capsule.size * 2,
+                            height: capsule.size * 2,
+                            left: capsule.x,
+                            top: capsule.y,
+                            animationDelay: `${capsule.delay}s, ${capsule.delay}s`,
+                            boxShadow: `0 2px 4px rgba(0,0,0,0.15)`,
+                          }}
+                        />
+                      ))}
+                      {/* Glass reflection */}
+                      <div className="absolute top-2 left-3 w-10 h-6 rounded-full bg-white/25 rotate-[-15deg]" />
+                    </div>
+                    {/* Machine base */}
+                    <div className="w-36 h-4 bg-white/25 rounded-b-lg border-x-2 border-b-2 border-white/40" />
+                    {/* Prize chute */}
+                    <div className="w-8 h-5 bg-[#5a3a1e]/20 rounded-b-lg border-2 border-white/30 mt-[-1px]" />
+                    {/* Chute opening */}
+                    <div className={`w-5 h-3 bg-[#3d2810]/30 rounded-b-md mt-[-1px] ${spinning ? '' : ''}`}>
+                      {spinning && (
+                        <div className="w-3 h-3 rounded-full bg-[#f7cd67] mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]" />
+                      )}
+                    </div>
+                  </div>
                 ) : (
-                  <div className={`text-6xl animate-[float_3s_ease-in-out_infinite] ${isAnimal ? 'drop-shadow-[0_3px_3px_rgba(61,52,40,0.2)]' : ''}`}>🥚</div>
+                  spinning ? (
+                    <div className="text-6xl animate-[shake_0.1s_ease-in-out_infinite]">🥚</div>
+                  ) : (
+                    <div className="text-6xl animate-[float_3s_ease-in-out_infinite]">🥚</div>
+                  )
                 )}
               </div>
               {isAnimal ? (
@@ -258,22 +307,38 @@ export default function GachaPage() {
               </div>
             </div>
 
-            {/* Spin lever button */}
+            {/* Spin crank */}
             <button
               onClick={handleSpin}
               disabled={spinning || myCoins < cost}
-              className={`absolute -right-3 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full shadow-soft-lg
-                         flex items-center justify-center text-xl font-bold transition-all duration-500 z-20 ${
+              className={`absolute -right-3 top-1/2 -translate-y-1/2 shadow-soft-lg
+                         flex items-center justify-center transition-all duration-500 z-20 ${
+                           isAnimal
+                             ? 'w-12 h-12 rounded-full bg-[#f7f3df] border-2 border-[#d5c4a8]'
+                             : 'w-14 h-14 rounded-full'
+                         } ${
                            spinning
-                             ? 'bg-blush text-white animate-[spin_0.5s_linear_infinite]'
+                             ? isAnimal
+                               ? 'animate-[spin_0.4s_linear_infinite]'
+                               : 'bg-blush text-white animate-[spin_0.5s_linear_infinite]'
                              : myCoins < cost
                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                : isAnimal
-                                 ? 'bg-[#f7f3df] text-[#794f27] border-2 border-[#d5c4a8] hover:scale-110 active:scale-95'
+                                 ? 'text-[#794f27] hover:scale-110 active:scale-95'
                                  : 'bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-primary)] text-white hover:scale-110 active:scale-95'
                          }`}
             >
-              {spinning ? '🌀' : isAnimal ? <AnimalIcon name="variant" size={24} /> : '🔘'}
+              {spinning ? (isAnimal ? (
+                <div className="flex items-center justify-center gap-1">
+                  <div className="w-1 h-3 rounded-full bg-[#794f27]" />
+                  <div className="w-1 h-3 rounded-full bg-[#794f27]" />
+                </div>
+              ) : '🌀') : isAnimal ? (
+                <div className="flex flex-col items-center gap-0.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#794f27]" />
+                  <div className="w-1 h-4 rounded-full bg-[#794f27]" />
+                </div>
+              ) : '🔘'}
             </button>
           </div>
 

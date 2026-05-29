@@ -390,6 +390,18 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-4px); }
 }
+
+/* ===== Gacha machine capsule tumble ===== */
+@keyframes capsuleTumble {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-3px, 5px) rotate(90deg); }
+  50% { transform: translate(2px, -3px) rotate(180deg); }
+  75% { transform: translate(4px, 2px) rotate(270deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+[data-ui="animal"] .capsule-tumble {
+  animation: capsuleTumble 0.5s ease-in-out infinite;
+}
 .animal-icon-bounce {
   animation: animal-icon-bounce 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
