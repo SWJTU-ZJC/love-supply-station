@@ -103,58 +103,50 @@ export default function MapPage() {
     return null;
   };
 
-  // Continuous GPS tracking with watchPosition
-  useEffect(() => {
+  // Single GPS fetch
+  const getPos = useCallback(async () => {
     setGpsErr('');
-    let watchId: number | null = null;
-    let mounted = true;
-
-    const handlePosition = async (pos: GeolocationPosition) => {
-      if (!mounted) return;
-      const gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-      const converted = await convertAmap(gps.lng, gps.lat);
-      if (mounted) {
-        setGpsPos(converted || gps);
-        setGpsErr('');
-      }
-    };
-
-    if (!navigator.geolocation) {
-      setGpsErr('设备不支持定位');
-      // Amap IP fallback
-      (async () => {
-        try {
-          const res = await fetch(`https://restapi.amap.com/v3/ip?key=a7beac025cbc7c2c55d5517c82d03b44`);
-          const d = await res.json();
-          if (d.status === '1' && d.rectangle && mounted) {
-            const [lng1, lat1, lng2, lat2] = d.rectangle.split(';')[0].split(',').map(Number);
-            setGpsPos({ lat: (lat1 + lat2) / 2, lng: (lng1 + lng2) / 2 });
-            setGpsErr('IP粗略定位');
-          }
-        } catch {}
-      })();
-    } else {
-      watchId = navigator.geolocation.watchPosition(
-        handlePosition,
-        () => setGpsErr('定位失败，请检查权限'),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
-      );
+    setGpsPos(null);
+    const tryGPS = (): Promise<{ lat: number; lng: number } | null> => new Promise(r => {
+      if (!navigator.geolocation) { r(null); return; }
+      navigator.geolocation.getCurrentPosition(p => r({ lat: p.coords.latitude, lng: p.coords.longitude }), () => r(null), { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+    });
+    const gps = await tryGPS();
+    if (gps) {
+      const c = await convertAmap(gps.lng, gps.lat);
+      setGpsPos(c || gps);
+      setGpsErr('');
+      return;
     }
-
-    return () => { mounted = false; if (watchId != null) navigator.geolocation.clearWatch(watchId); };
+    try {
+      const res = await fetch(`https://restapi.amap.com/v3/ip?key=a7beac025cbc7c2c55d5517c82d03b44`);
+      const d = await res.json();
+      if (d.status === '1' && d.rectangle) {
+        const [lng1, lat1, lng2, lat2] = d.rectangle.split(';')[0].split(',').map(Number);
+        setGpsPos({ lat: (lat1 + lat2) / 2, lng: (lng1 + lng2) / 2 });
+        setGpsErr('IP粗略定位');
+      }
+    } catch { setGpsErr('定位失败，请检查权限'); }
   }, []);
 
-  // Upload GPS position continuously
+  useEffect(() => { getPos(); }, [getPos]);
+
+  // Upload GPS every 30s
   useEffect(() => {
     if (!gpsPos) return;
     updatePartnerLocation(gpsPos.lat, gpsPos.lng);
-    const timer = setInterval(() => {
-      if (gpsRef.current) updatePartnerLocation(gpsRef.current.lat, gpsRef.current.lng);
-    }, 10000);
+    const timer = setInterval(() => { if (gpsRef.current) updatePartnerLocation(gpsRef.current.lat, gpsRef.current.lng); }, 30000);
     return () => clearInterval(timer);
   }, [gpsPos, updatePartnerLocation]);
 
+  // Distance between partners (km)
   const partnerLocation = (state.partnerLocations || []).find(l => l.userId !== user?.id);
+  const distanceKm = (() => {
+    if (!gpsPos || !partnerLocation) return null;
+    const R = 6371, dLat = (partnerLocation.lat - gpsPos.lat) * Math.PI / 180, dLng = (partnerLocation.lng - gpsPos.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(gpsPos.lat*Math.PI/180) * Math.cos(partnerLocation.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  })();
 
   const addPartnerMarker = (map: L.Map) => {
     if (partnerMarkerRef.current) { partnerMarkerRef.current.remove(); partnerMarkerRef.current = null; }
@@ -337,6 +329,12 @@ export default function MapPage() {
         <div className="bg-white rounded-full px-3 py-1.5 shadow-soft flex items-center gap-2 text-sm">
           <span className={`w-2 h-2 rounded-full ${gpsPos ? 'bg-mint' : 'bg-red-400 animate-pulse'}`} />
           <span className="text-text-secondary text-xs">{gpsPos ? '已定位' : gpsErr || '定位中...'}</span>
+          {distanceKm != null && (
+            <span className="text-xs text-blush font-semibold ml-2">
+              · {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
+            </span>
+          )}
+          <button onClick={handleRefreshPos} className="text-xs text-text-secondary hover:text-text-primary ml-1" title="刷新定位">🔄</button>
         </div>
         <div className="bg-white rounded-full px-3 py-1.5 shadow-soft text-sm">
           <span className="text-text-secondary text-xs">🪙 {myCoins}</span>
