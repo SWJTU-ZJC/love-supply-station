@@ -1,0 +1,11 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <rect width="24" height="24" fill="transparent" shape-rendering="crispEdges"/>
+  <circle cx="12" cy="12" r="10" fill="#4888F0" shape-rendering="crispEdges"/>
+  <rect x="2" y="12" width="20" height="10" fill="#F8F8F8" shape-rendering="crispEdges"/>
+  <rect x="2" y="11" width="20" height="2" fill="#383850" shape-rendering="crispEdges"/>
+  <!-- Red bumps -->
+  <rect x="5" y="0" width="3" height="4" fill="#E02020" shape-rendering="crispEdges"/>
+  <rect x="16" y="0" width="3" height="4" fill="#E02020" shape-rendering="crispEdges"/>
+  <circle cx="12" cy="12" r="3" fill="#F8F8F8" shape-rendering="crispEdges"/>
+  <circle cx="12" cy="12" r="2" fill="#383850" shape-rendering="crispEdges"/>
+</svg>
