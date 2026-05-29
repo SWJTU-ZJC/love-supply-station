@@ -209,18 +209,6 @@ async function saveCheckinImageToDB(id: string, url: string): Promise<void> {
     });
   } catch {}
 }
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(PHOTO_STORE, 'readwrite');
-      const store = tx.objectStore(PHOTO_STORE);
-      store.clear();
-      for (const p of photos) store.put(p);
-      tx.oncomplete = () => { db.close(); resolve(); };
-      tx.onerror = () => { db.close(); resolve(); };
-    });
-  } catch {}
-}
 
 // ========== localStorage helpers (state without photos) ==========
 
