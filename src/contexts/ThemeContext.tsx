@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useLayoutEffect, useCallback, type ReactNode } from 'react';
 
 export type Theme = 'default' | 'latte' | 'lavender' | 'olive';
-export type UIMode = 'default' | 'apple' | 'animal';
+export type UIMode = 'default' | 'apple' | 'animal' | 'pixel';
 
 export const themeLabels: Record<Theme, string> = {
   default: '恋爱粉',
@@ -14,6 +14,7 @@ export const uiModeLabels: Record<UIMode, string> = {
   default: '经典',
   apple: '苹果风',
   animal: '动森风',
+  pixel: '宝可梦像素',
 };
 
 export const themeColors: Record<Theme, { primary: string; accent: string; blue: string; green: string }> = {
@@ -46,7 +47,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [uiMode, setUIModeState] = useState<UIMode>(() => {
     try {
       const stored = localStorage.getItem('love-ui');
-      if (stored && ['default', 'apple', 'animal'].includes(stored)) {
+      if (stored && ['default', 'apple', 'animal', 'pixel'].includes(stored)) {
         return stored as UIMode;
       }
     } catch {}

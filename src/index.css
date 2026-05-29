@@ -420,6 +420,214 @@
   border-radius: 50px;
 }
 
+/* ========== UI Mode: 宝可梦像素风 Pokémon Pixel Style ========== */
+[data-ui="pixel"] {
+  --radius-card: 0px;
+  --radius-sm-card: 0px;
+  --radius-btn: 4px;
+  --shadow-card: none;
+  --shadow-card-lg: none;
+}
+
+/* Pixel: dark game background */
+[data-ui="pixel"] body {
+  font-family: 'Pixelify Sans', 'Press Start 2P', 'ZCOOL KuaiLe', monospace;
+  background: #383850;
+  color: #f8f8f8;
+}
+
+/* Pixel: app shell — GBA screen */
+[data-ui="pixel"] .app-shell {
+  background: #383850;
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+}
+
+/* Pixel: all text gets drop shadow */
+[data-ui="pixel"] p, [data-ui="pixel"] span, [data-ui="pixel"] h1, [data-ui="pixel"] h2, [data-ui="pixel"] h3, [data-ui="pixel"] h4, [data-ui="pixel"] label, [data-ui="pixel"] input {
+  text-shadow: 2px 2px 0 #383850;
+}
+
+/* Pixel: cards — 9-slice window panels */
+[data-ui="pixel"] .bg-white.rounded-card,
+[data-ui="pixel"] .bg-white.rounded-sm-card {
+  background: #706880;
+  border: 3px solid #484868;
+  box-shadow: inset 0 0 0 1px #8888c8;
+  color: #f8f8f8;
+  border-radius: 0;
+}
+
+/* Pixel: card with gradient — re-colored for dark theme */
+[data-ui="pixel"] .bg-gradient-to-r.from-blush\/20.to-sunset\/20 {
+  background: #706880;
+  border: 3px solid #484868;
+  box-shadow: inset 0 0 0 1px #8888c8;
+  border-radius: 0;
+}
+
+/* Pixel: page background override */
+[data-ui="pixel"] .bg-cream {
+  background: #383850;
+}
+[data-ui="pixel"] .bg-apricot { background: #585870; }
+[data-ui="pixel"] .bg-apricot\/30 { background: rgba(88,88,112,0.3); }
+[data-ui="pixel"] .bg-apricot\/50 { background: rgba(88,88,112,0.5); }
+[data-ui="pixel"] .bg-blush\/20 { background: rgba(136,136,200,0.15); }
+[data-ui="pixel"] .bg-sunset\/10 { background: rgba(248,176,80,0.08); }
+[data-ui="pixel"] .bg-sunset\/20 { background: rgba(248,176,80,0.14); }
+
+/* Pixel: buttons — GBA style */
+[data-ui="pixel"] button {
+  font-family: 'Pixelify Sans', 'Press Start 2P', monospace;
+  border-radius: 4px;
+  transition: all 0.125s ease-out;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+}
+[data-ui="pixel"] button:focus-visible {
+  outline: 2px solid #f8b050;
+  outline-offset: 2px;
+}
+
+/* Pixel: primary button — gold accent */
+[data-ui="pixel"] .btn-gradient {
+  background: #f8b050;
+  color: #383850;
+  border: 3px solid #784800;
+  box-shadow: inset 0 0 0 1px #fcd888;
+  border-radius: 4px;
+  text-shadow: none;
+  font-weight: 700;
+  background-image: none;
+}
+[data-ui="pixel"] .btn-gradient:hover {
+  background: #fcd888;
+  border-color: #986000;
+}
+[data-ui="pixel"] .btn-gradient:active {
+  background: #d09030;
+}
+[data-ui="pixel"] .btn-gradient:disabled {
+  background: #686880;
+  border-color: #484868;
+  box-shadow: none;
+  color: #9898a8;
+}
+
+/* Pixel: TabBar — dark panel with top border */
+[data-ui="pixel"] .TabBar {
+  background: #484868;
+  border-top: 3px solid #706880;
+  box-shadow: none;
+}
+[data-ui="pixel"] .TabBar button {
+  border-radius: 0;
+  font-family: 'Pixelify Sans', monospace;
+}
+[data-ui="pixel"] .TabBar button.bg-blush\/20 {
+  background: #8888c8;
+  color: #383850;
+  text-shadow: none;
+}
+[data-ui="pixel"] .TabBar span.text-xs {
+  text-shadow: 1px 1px 0 #383850;
+}
+
+/* Pixel: text colors */
+[data-ui="pixel"] .text-text-primary { color: #f8f8f8; }
+[data-ui="pixel"] .text-text-secondary { color: #c8c8d8; }
+[data-ui="pixel"] .text-blush { color: #f89890; }
+[data-ui="pixel"] .text-sunset { color: #f8b050; }
+[data-ui="pixel"] .text-calm { color: #48DDAA; }
+[data-ui="pixel"] .text-mint { color: #78c850; }
+[data-ui="pixel"] .text-red-400 { color: #e70808; }
+
+/* Pixel: gold text (coins, titles) */
+[data-ui="pixel"] .text-sunset {
+  color: #f8b050;
+}
+
+/* Pixel: inputs — dark with bright border */
+[data-ui="pixel"] input[type="text"],
+[data-ui="pixel"] input[type="number"],
+[data-ui="pixel"] textarea {
+  background: #484868;
+  border: 3px solid #706880;
+  border-radius: 0;
+  color: #f8f8f8;
+  font-family: 'Pixelify Sans', monospace;
+}
+[data-ui="pixel"] input:focus,
+[data-ui="pixel"] textarea:focus {
+  border-color: #f8b050;
+  box-shadow: 0 0 0 2px rgba(248,176,80,0.3);
+  outline: none;
+}
+
+/* Pixel: modals — 9-slice dialog */
+[data-ui="pixel"] .fixed.inset-0.bg-black\/20 {
+  background: rgba(0,0,0,0.5);
+}
+[data-ui="pixel"] .fixed .bg-white.rounded-card,
+[data-ui="pixel"] .fixed .bg-white.rounded-t-card {
+  background: #706880;
+  border: 3px solid #484868;
+  box-shadow: inset 0 0 0 1px #8888c8;
+  border-radius: 0;
+  color: #f8f8f8;
+}
+
+/* Pixel: rings and badges */
+[data-ui="pixel"] .ring-blush\/20 { --tw-ring-color: rgba(136,136,200,0.3); }
+[data-ui="pixel"] .ring-blush\/40 { --tw-ring-color: rgba(136,136,200,0.5); }
+[data-ui="pixel"] .rounded-full { border-radius: 0; }
+
+/* Pixel: coin/badge pills */
+[data-ui="pixel"] .bg-white.rounded-full {
+  background: #706880;
+  border: 2px solid #484868;
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(136,136,200,0.5);
+}
+
+/* Pixel: scrollbar */
+[data-ui="pixel"] ::-webkit-scrollbar-thumb {
+  background: #8888c8;
+  border-radius: 0;
+}
+
+/* Pixel: border colors */
+[data-ui="pixel"] .border-apricot\/30 { border-color: #585870; }
+[data-ui="pixel"] .border-blush\/20 { border-color: rgba(136,136,200,0.2); }
+[data-ui="pixel"] .border-blush\/30 { border-color: rgba(136,136,200,0.3); }
+
+/* Pixel: title font — game title */
+[data-ui="pixel"] .font-title {
+  font-family: 'Press Start 2P', 'ZCOOL KuaiLe', monospace;
+  font-size: 0.85em;
+  color: #f8b050;
+  text-shadow: 3px 3px 0 #6b3a00;
+  letter-spacing: 0;
+  line-height: 1.8;
+}
+
+/* Pixel: image grid sharp corners */
+[data-ui="pixel"] .grid .rounded-xl,
+[data-ui="pixel"] .grid .rounded-2xl {
+  border-radius: 0;
+}
+
+/* Pixel: floating emoji/icons */
+[data-ui="pixel"] .animate-\[float_3s_ease-in-out_infinite\] {
+  filter: none;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+/* Pixel: coin display */
+[data-ui="pixel"] .text-sunset {
+  color: #f8b050;
+  text-shadow: 2px 2px 0 #6b3a00;
+}
+
 /* ========== Base ========== */
 * {
   margin: 0;

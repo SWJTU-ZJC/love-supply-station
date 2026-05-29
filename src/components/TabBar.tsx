@@ -2,18 +2,33 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import AnimalIcon, { type AnimalIconName } from './AnimalIcon';
 
+const pixelBase = '/assets/pixel-sprites';
+
 const tabs = [
-  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName },
-  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName },
-  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName },
-  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName },
+  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName, pixelSprite: 'pikachu' },
+  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName, pixelSprite: 'heart' },
+  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName, pixelSprite: 'map' },
+  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName, pixelSprite: 'eevee' },
 ];
+
+function PixelSprite({ name, size = 28 }: { name: string; size?: number }) {
+  return (
+    <img
+      src={`${pixelBase}/${name}.svg`}
+      alt={name}
+      width={size}
+      height={size}
+      style={{ imageRendering: 'pixelated', display: 'block' }}
+    />
+  );
+}
 
 export default function TabBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { uiMode } = useTheme();
   const isAnimal = uiMode === 'animal';
+  const isPixel = uiMode === 'pixel';
 
   const currentPath = '/' + location.pathname.split('/')[1];
 
@@ -36,8 +51,10 @@ export default function TabBar() {
                          : 'text-text-secondary hover:text-text-primary'
                        }`}
           >
-            <span className={`leading-none ${isAnimal ? 'animal-tab-icon' : 'text-2xl'}`}>
-              {isAnimal ? (
+            <span className={`leading-none ${isAnimal ? 'animal-tab-icon' : isPixel ? 'pixel-tab-icon' : 'text-2xl'}`}>
+              {isPixel ? (
+                <PixelSprite name={tab.pixelSprite} size={28} />
+              ) : isAnimal ? (
                 <AnimalIcon name={tab.animalIcon} size={28} />
               ) : (
                 isActive ? tab.activeIcon : tab.icon

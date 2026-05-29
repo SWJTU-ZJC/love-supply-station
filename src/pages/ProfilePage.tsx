@@ -163,7 +163,7 @@ export default function ProfilePage() {
             <span className="text-text-primary text-sm">界面风格</span>
             <span className="text-text-secondary text-xs ml-auto">{uiModeLabels[uiMode]}</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {(Object.keys(uiModeLabels) as UIMode[]).map(m => (
               <button
                 key={m}
@@ -172,12 +172,12 @@ export default function ProfilePage() {
                   ${uiMode === m ? 'bg-apricot ring-2 ring-blush/40' : 'hover:bg-apricot/30 text-text-secondary'}`}
               >
                 <span className="text-xl">
-                  {m === 'default' ? '📐' : m === 'apple' ? '✨' : '🏝️'}
+                  {m === 'default' ? '📐' : m === 'apple' ? '✨' : m === 'animal' ? '🏝️' : '🎮'}
                 </span>
                 <div className="text-center">
                   <p className={`text-xs ${uiMode === m ? 'text-text-primary font-semibold' : ''}`}>{uiModeLabels[m]}</p>
                   <p className="text-xs text-text-secondary/70 mt-0.5 leading-tight">
-                    {m === 'default' ? '温暖圆润' : m === 'apple' ? '极简轻盈' : '手绘质感'}
+                    {m === 'default' ? '温暖圆润' : m === 'apple' ? '极简轻盈' : m === 'animal' ? '手绘质感' : '像素复古'}
                   </p>
                 </div>
               </button>
