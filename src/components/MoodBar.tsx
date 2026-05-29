@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { useSync } from '../contexts/SyncContext';
+import { useTheme } from '../contexts/ThemeContext';
+import PixelSprite from './PixelSprite';
 import type { Mood } from '../types';
 
-const moods: { emoji: Mood; label: string }[] = [
-  { emoji: '😊', label: '开心' },
-  { emoji: '🥺', label: '想你' },
-  { emoji: '😤', label: '生气' },
-  { emoji: '😴', label: '疲惫' },
-  { emoji: '🥰', label: '求安慰' },
+const moods: { emoji: Mood; label: string; sprite: keyof typeof import('./PixelSprite').SPRITES }[] = [
+  { emoji: '😊', label: '开心', sprite: 'pikachu' },
+  { emoji: '🥺', label: '想你', sprite: 'luvdisc' },
+  { emoji: '😤', label: '生气', sprite: 'meowth' },
+  { emoji: '😴', label: '疲惫', sprite: 'snorlax' },
+  { emoji: '🥰', label: '求安慰', sprite: 'clefairy' },
 ];
 
 export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: string; onMoodSelect: () => void }) {
   const { updateMood } = useSync();
+  const { uiMode } = useTheme();
+  const isPixel = uiMode === 'pixel';
   const [selected, setSelected] = useState<string>(currentMood);
   const [animating, setAnimating] = useState<string | null>(null);
 
@@ -36,7 +40,7 @@ export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: st
     <div className="bg-white rounded-card p-4 shadow-soft">
       <p className="text-xs text-text-secondary mb-3 ml-1">今天心情怎么样？</p>
       <div className="flex justify-between items-center gap-1 overflow-x-auto pb-1">
-        {moods.map(({ emoji, label }) => (
+        {moods.map(({ emoji, label, sprite }) => (
           <button
             key={emoji}
             onClick={() => handleMood(emoji)}
@@ -49,9 +53,9 @@ export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: st
                        ${animating === emoji ? 'animate-[shake_0.3s_ease-in-out]' : ''}
             `}
           >
-            <span className={`text-2xl transition-transform duration-300
+            <span className={`transition-transform duration-300 ${isPixel ? '' : 'text-2xl'}
               ${selected === emoji ? 'scale-125' : ''}`}>
-              {emoji}
+              {isPixel ? <PixelSprite name={sprite} size={32} /> : emoji}
             </span>
             <span className={`text-xs transition-colors duration-300
               ${selected === emoji ? 'text-text-primary font-semibold' : 'text-text-secondary'}`}>

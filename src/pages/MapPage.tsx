@@ -4,6 +4,7 @@ import { useSync } from '../contexts/SyncContext';
 import L from 'leaflet';
 import confetti from 'canvas-confetti';
 import { useTheme, themeColors } from '../contexts/ThemeContext';
+import { spriteUrl } from '../components/PixelSprite';
 
 function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -26,8 +27,9 @@ function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.7
 export default function MapPage() {
   const { user, partner } = useAuth();
   const { state, addCheckin, deleteCheckin, updateCoins } = useSync();
-  const { theme } = useTheme();
+  const { theme, uiMode } = useTheme();
   const tc = themeColors[theme];
+  const isPixel = uiMode === 'pixel';
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,6 +133,8 @@ export default function MapPage() {
 
   const addMarker = (map: L.Map, checkin: any) => {
     const isMine = checkin.userId === user?.id;
+    const spriteName = isMine ? 'clefairy' : 'snorlax';
+    const spriteSrc = spriteUrl(spriteName);
     const emoji = isMine ? user?.avatar || '🐰' : partner?.avatar || '🐻';
     const icon = L.divIcon({
       html: `<div style="
@@ -140,7 +144,7 @@ export default function MapPage() {
         font-size:22px;
         border:3px solid white;
         box-shadow:0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
-      ">${emoji}</div>`,
+      ">${isPixel ? `<img src=\\"${spriteSrc}\\" width=28 height=28 style=\\"image-rendering:pixelated\\">` : emoji}</div>`,
       className: 'checkin-marker',
       iconSize: [40, 40],
       iconAnchor: [20, 20],
