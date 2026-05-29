@@ -771,14 +771,48 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const updatePartnerLocation = useCallback((lat: number, lng: number) => {
     if (!user) return;
-    updateLocal(prev => ({
-      ...prev,
-      partnerLocations: [
-        ...prev.partnerLocations.filter(l => l.userId !== user.id),
-        { userId: user.id, lat, lng, updatedAt: Date.now() },
-      ],
-    }));
-  }, [user, updateLocal]);
+    setState(prev => {
+      const next = {
+        ...prev,
+        version: prev.version + 1,
+        partnerLocations: [
+          ...prev.partnerLocations.filter(l => l.userId !== user.id),
+          { userId: user.id, lat, lng, updatedAt: Date.now() },
+        ],
+      };
+      saveLocal(next);
+      return next;
+    });
+    // Force immediate push for real-time location
+    dirtyRef.current = true;
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    pushTimerRef.current = setTimeout(async () => {
+      if (!dirtyRef.current || pushingRef.current) return;
+      dirtyRef.current = false;
+      pushingRef.current = true;
+      setSyncing(true);
+      const current = stateRef.current;
+      const etag = etagRef.current || '';
+      let newEtag = await pushRemote(current, etag);
+      if (!newEtag && etag) {
+        const result = await fetchRemote();
+        if (result && typeof result === 'object') {
+          etagRef.current = result.etag;
+          const merged = mergeStates(current, result.state);
+          merged.version = Math.max(current.version, result.state.version) + 1;
+          newEtag = await pushRemote(merged, result.etag);
+          if (newEtag) { setState(merged); saveLocal(merged); }
+        }
+      }
+      if (newEtag) {
+        etagRef.current = newEtag;
+        const now = new Date();
+        setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+      }
+      pushingRef.current = false;
+      setSyncing(false);
+    }, 500);
+  }, [user, pushRemote, fetchRemote, stateRef, etagRef]);
 
   return (
     <SyncContext.Provider value={{
