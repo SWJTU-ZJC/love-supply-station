@@ -54,34 +54,15 @@ export default function MapPage() {
     placeCacheRef.current[key] = '...';
     try {
       let name = '';
-      // Try multiple free geocoding APIs in order
-      const apis = [
-        async () => {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh-CN`, {
-            headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
-          });
-          if (!res.ok) return '';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh-CN`, {
+          headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
+        });
+        if (res.ok) {
           const d = await res.json();
-          return d.display_name || d.name || '';
-        },
-        async () => {
-          const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location=${lng},${lat}&langCode=zh-CN`);
-          if (!res.ok) return '';
-          const d = await res.json();
-          return d.address?.LongLabel || d.address?.Match_addr || '';
-        },
-        async () => {
-          const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=zh`);
-          if (!res.ok) return '';
-          const d = await res.json();
-          const f = d.features?.[0]?.properties;
-          return f ? [f.name, f.street, f.city, f.state, f.country].filter(Boolean).join('，') : '';
-        },
-      ];
-      for (const fn of apis) {
-        try { name = await fn(); } catch {}
-        if (name) break;
-      }
+          name = d.display_name || '';
+        }
+      } catch {}
       if (name) {
         placeCacheRef.current[key] = name;
         setPlaceNames(prev => ({ ...prev, [key]: name }));
