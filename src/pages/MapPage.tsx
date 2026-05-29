@@ -131,6 +131,8 @@ export default function MapPage() {
 
   useEffect(() => { getPos(); }, [getPos]);
 
+  const handleRefreshPos = () => { getPos(); };
+
   // Upload GPS every 30s
   useEffect(() => {
     if (!gpsPos) return;
