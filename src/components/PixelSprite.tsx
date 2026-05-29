@@ -1,26 +1,22 @@
-const BASE = '/assets/pixel-sprites';
-
-export interface PixelSprite {
-  src: string;   // e.g. 'pikachu-gen5.png'
-  alt?: string;
-}
+const PS_BASE = 'https://play.pokemonshowdown.com/sprites/gen5';
+const LOCAL_BASE = '/assets/pixel-sprites';
 
 export const SPRITES = {
-  pikachu: 'pikachu-gen5.png',
-  snorlax: 'snorlax-gen5.png',
-  clefairy: 'clefairy-gen5.png',
-  eevee: 'eevee-gen5.png',
-  meowth: 'meowth-gen5.png',
-  chansey: 'chansey-gen5.png',
-  luvdisc: 'luvdisc-gen5.png',
-  smeargle: 'smeargle-gen5.png',
-  jirachi: 'jirachi-gen5.png',
-  togepi: 'togepi-gen5.png',
-  pokeball: 'pokeball.svg',
-  greatball: 'greatball.svg',
-  ultraball: 'ultraball.svg',
-  heart: 'heart.svg',
-  map: 'map.svg',
+  pikachu:   { file: 'pikachu.png', cdn: true },
+  snorlax:   { file: 'snorlax.png', cdn: true },
+  clefairy:  { file: 'clefairy.png', cdn: true },
+  eevee:     { file: 'eevee.png', cdn: true },
+  meowth:    { file: 'meowth.png', cdn: true },
+  chansey:   { file: 'chansey.png', cdn: true },
+  luvdisc:   { file: 'luvdisc.png', cdn: true },
+  smeargle:  { file: 'smeargle.png', cdn: true },
+  jirachi:   { file: 'jirachi.png', cdn: true },
+  togepi:    { file: 'togepi.png', cdn: true },
+  pokeball:  { file: 'pokeball.svg', cdn: false },
+  greatball: { file: 'greatball.svg', cdn: false },
+  ultraball: { file: 'ultraball.svg', cdn: false },
+  heart:     { file: 'heart.svg', cdn: false },
+  map:       { file: 'map.svg', cdn: false },
 } as const;
 
 export function getAvatarSprite(emoji: string): keyof typeof SPRITES {
@@ -28,7 +24,8 @@ export function getAvatarSprite(emoji: string): keyof typeof SPRITES {
 }
 
 export function spriteUrl(name: keyof typeof SPRITES): string {
-  return `${BASE}/${SPRITES[name]}`;
+  const s = SPRITES[name];
+  return s.cdn ? `${PS_BASE}/${s.file}` : `${LOCAL_BASE}/${s.file}`;
 }
 
 export default function PixelSprite({ name, size = 28, className }: { name: keyof typeof SPRITES; size?: number; className?: string }) {
