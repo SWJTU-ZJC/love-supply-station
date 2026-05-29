@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta charset="UTF-8"><title>Pixel Sprites Preview</title>
+<style>
+  body { background: #383850; color: #f8f8f8; font-family: monospace; padding: 20px; }
+  h1 { text-align: center; color: #f8b050; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px,1fr)); gap: 16px; max-width: 600px; margin: 20px auto; }
+  .card { background: #706880; border: 3px solid #484868; padding: 12px; text-align: center; }
+  .card img { image-rendering: pixelated; width: 64px; height: 64px; }
+  .card p { font-size: 11px; margin-top: 6px; color: #c8c8d8; }
+  .card .name { color: #f8b050; font-weight: bold; }
+</style></head>
+<body>
+<h1>Pixel Pokemon Sprites</h1>
+<div class="grid" id="grid"></div>
+<script>
+const sprites = [
+  { file:'pikachu.svg', name:'Pikachu', use:'首页 Tab' },
+  { file:'snorlax.svg', name:'Snorlax', use:'张佳琛头像' },
+  { file:'buneary.svg', name:'Buneary', use:'周佳慧头像' },
+  { file:'eevee.svg', name:'Eevee', use:'我的 Tab' },
+  { file:'meowth.svg', name:'Meowth', use:'金币' },
+  { file:'egg.svg', name:'Egg', use:'空状态' },
+  { file:'pokeball.svg', name:'Poké Ball', use:'扭蛋普通' },
+  { file:'greatball.svg', name:'Great Ball', use:'扭蛋稀有' },
+  { file:'ultraball.svg', name:'Ultra Ball', use:'扭蛋超级' },
+  { file:'heart.svg', name:'Heart', use:'纪念日' },
+  { file:'map.svg', name:'Map', use:'打卡' },
+];
+const base = '/assets/pixel-sprites/';
+document.getElementById('grid').innerHTML = sprites.map(s =>
+  `<div class="card"><img src="${base}${s.file}" onerror="this.parentElement.innerHTML='<p style=color:red>missing</p>'"><p class="name">${s.name}</p><p>${s.use}</p></div>`
+).join('');
+</script>
+</body></html>
