@@ -85,7 +85,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-2 gap-3">
         {([
           { label: '上传照片', count: photoCount, emoji: '🎬', animalIcon: 'camera' as const, pixelSprite: 'smeargle' as const, color: '#b77dee' },
-          { label: '打卡地点', count: checkinCount, emoji: '📍', animalIcon: 'map' as const, pixelSprite: 'pikachu' as const, color: '#82d5bb' },
+          { label: '打卡地点', count: checkinCount, emoji: '📍', animalIcon: 'map' as const, pixelSprite: 'diglett' as const, color: '#82d5bb' },
           { label: '完成小事', count: doneCount, emoji: '✅', animalIcon: 'diy' as const, pixelSprite: 'togepi' as const, color: '#f7cd67' },
         ]).map((stat) => (
           <div

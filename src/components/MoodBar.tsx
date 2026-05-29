@@ -5,11 +5,11 @@ import PixelSprite from './PixelSprite';
 import type { Mood } from '../types';
 
 const moods: { emoji: Mood; label: string; sprite: keyof typeof import('./PixelSprite').SPRITES }[] = [
-  { emoji: '😊', label: '开心', sprite: 'pikachu' },
-  { emoji: '🥺', label: '想你', sprite: 'luvdisc' },
-  { emoji: '😤', label: '生气', sprite: 'meowth' },
-  { emoji: '😴', label: '疲惫', sprite: 'snorlax' },
-  { emoji: '🥰', label: '求安慰', sprite: 'clefairy' },
+  { emoji: '😊', label: '开心', sprite: 'psyduck' },
+  { emoji: '🥺', label: '想你', sprite: 'cubone' },
+  { emoji: '😤', label: '生气', sprite: 'primeape' },
+  { emoji: '😴', label: '疲惫', sprite: 'slowpoke' },
+  { emoji: '🥰', label: '求安慰', sprite: 'vulpix' },
 ];
 
 export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: string; onMoodSelect: () => void }) {

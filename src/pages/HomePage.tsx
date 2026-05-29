@@ -69,7 +69,7 @@ export default function HomePage() {
             张佳琛 & 周佳慧
           </h1>
           <span className="animate-[float_3s_ease-in-out_infinite_0.5s]">
-            {isPixel ? <PixelSprite name="clefairy" size={48} /> : <span className="text-2xl">🐰</span>}
+            {isPixel ? <PixelSprite name="jigglypuff" size={48} /> : <span className="text-2xl">🐰</span>}
           </span>
         </div>
         <p className="text-text-secondary text-xs mt-0.5">💕 恋爱补给站 💕</p>

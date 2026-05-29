@@ -52,7 +52,7 @@ const typeIcons: Record<string, AnimalIconName> = {
 };
 
 const typePixelSprites = {
-  anniversary: 'luvdisc' as const,
+  anniversary: 'milotic' as const,
   birthday: 'chansey' as const,
   memory: 'jirachi' as const,
 };

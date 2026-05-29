@@ -4,7 +4,7 @@ import { useSync } from '../contexts/SyncContext';
 import L from 'leaflet';
 import confetti from 'canvas-confetti';
 import { useTheme, themeColors } from '../contexts/ThemeContext';
-import { spriteUrl } from '../components/PixelSprite';
+import { spriteUrl, getAvatarSprite } from '../components/PixelSprite';
 
 function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.75): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -133,7 +133,8 @@ export default function MapPage() {
 
   const addMarker = (map: L.Map, checkin: any) => {
     const isMine = checkin.userId === user?.id;
-    const spriteName = isMine ? 'clefairy' : 'snorlax';
+    const avatarEmoji = isMine ? (user?.avatar || '🐰') : (partner?.avatar || '🐻');
+    const spriteName = getAvatarSprite(avatarEmoji);
     const spriteSrc = spriteUrl(spriteName);
     const emoji = isMine ? user?.avatar || '🐰' : partner?.avatar || '🐻';
     const icon = L.divIcon({

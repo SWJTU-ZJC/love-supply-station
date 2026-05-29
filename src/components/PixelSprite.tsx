@@ -2,9 +2,10 @@ const PS_BASE = 'https://play.pokemonshowdown.com/sprites/gen5';
 const LOCAL_BASE = '/assets/pixel-sprites';
 
 export const SPRITES = {
+  // Pokemon sprites from CDN (cdn=true)
   pikachu:   { file: 'pikachu.png', cdn: true },
   snorlax:   { file: 'snorlax.png', cdn: true },
-  clefairy:  { file: 'clefairy.png', cdn: true },
+  jigglypuff:{ file: 'jigglypuff.png', cdn: true },
   eevee:     { file: 'eevee.png', cdn: true },
   meowth:    { file: 'meowth.png', cdn: true },
   chansey:   { file: 'chansey.png', cdn: true },
@@ -12,6 +13,15 @@ export const SPRITES = {
   smeargle:  { file: 'smeargle.png', cdn: true },
   jirachi:   { file: 'jirachi.png', cdn: true },
   togepi:    { file: 'togepi.png', cdn: true },
+  farfetchd: { file: 'farfetchd.png', cdn: true },
+  diglett:   { file: 'diglett.png', cdn: true },
+  milotic:   { file: 'milotic.png', cdn: true },
+  psyduck:   { file: 'psyduck.png', cdn: true },
+  cubone:    { file: 'cubone.png', cdn: true },
+  primeape:  { file: 'primeape.png', cdn: true },
+  slowpoke:  { file: 'slowpoke.png', cdn: true },
+  vulpix:    { file: 'vulpix.png', cdn: true },
+  // Local SVGs
   pokeball:  { file: 'pokeball.svg', cdn: false },
   greatball: { file: 'greatball.svg', cdn: false },
   ultraball: { file: 'ultraball.svg', cdn: false },
@@ -20,7 +30,7 @@ export const SPRITES = {
 } as const;
 
 export function getAvatarSprite(emoji: string): keyof typeof SPRITES {
-  return emoji === '🐻' ? 'snorlax' : 'clefairy';
+  return emoji === '🐻' ? 'snorlax' : 'jigglypuff';
 }
 
 export function spriteUrl(name: keyof typeof SPRITES): string {

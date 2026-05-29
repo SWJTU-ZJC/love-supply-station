@@ -6,7 +6,7 @@ import PixelSprite from './PixelSprite';
 const tabs = [
   { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName, sprite: 'pikachu' as const },
   { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName, sprite: 'luvdisc' as const },
-  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName, sprite: 'pikachu' as const },
+  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName, sprite: 'farfetchd' as const },
   { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName, sprite: 'eevee' as const },
 ];
 
