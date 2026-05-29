@@ -31,6 +31,7 @@ export default function MapPage() {
   const tc = themeColors[theme];
   const isPixel = uiMode === 'pixel';
   const mapRef = useRef<L.Map | null>(null);
+  const [mapReady, setMapReady] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
@@ -47,6 +48,8 @@ export default function MapPage() {
   const partnerMarkerRef = useRef<L.Marker | null>(null);
   const [placeNames, setPlaceNames] = useState<Record<string, string>>({});
   const placeCacheRef = useRef<Record<string, string>>({});
+  const gpsRef = useRef(gpsPos);
+  gpsRef.current = gpsPos;
 
   // Reverse geocode: get place name from coords
   const fetchPlaceName = async (lat: number, lng: number) => {
@@ -150,12 +153,14 @@ export default function MapPage() {
   // Upload GPS position every 30 seconds
   useEffect(() => {
     if (!gpsPos) return;
-    updatePartnerLocation(gpsPos.lat, gpsPos.lng);
-    const timer = setInterval(() => {
-      if (gpsPos) updatePartnerLocation(gpsPos.lat, gpsPos.lng);
-    }, 30000);
+    const upload = () => {
+      const g = gpsRef.current;
+      if (g) updatePartnerLocation(g.lat, g.lng);
+    };
+    upload();
+    const timer = setInterval(upload, 30000);
     return () => clearInterval(timer);
-  }, [gpsPos, updatePartnerLocation]);
+  }, [!!gpsPos, updatePartnerLocation]);
 
   // Display partner's location on map
   const partnerLocation = (state.partnerLocations || []).find(l => l.userId !== user?.id);
@@ -187,9 +192,11 @@ export default function MapPage() {
       partnerMarkerRef.current = L.marker([partnerLocation.lat, partnerLocation.lng], { icon, zIndexOffset: 2000 }).addTo(map);
       partnerMarkerRef.current.bindPopup(`<b>${partner.nickname}</b><br/>${new Date(partnerLocation.updatedAt).toLocaleTimeString('zh-CN')}`);
     }
-  }, [partnerLocation, partner, viewMode, mapRef.current, isPixel, user]);
-    if (viewMode !== 'map' || !mapContainerRef.current) return;
+  }, [partnerLocation, partner, viewMode, mapReady, isPixel, user]);
 
+  // Map initialization (must be after partner display useEffect)
+  useEffect(() => {
+    if (viewMode !== 'map' || !mapContainerRef.current) return;
     if (mapRef.current) {
       mapRef.current.invalidateSize();
       markersRef.current.forEach(m => m.remove());
@@ -197,27 +204,17 @@ export default function MapPage() {
       checkins.forEach(c => addMarker(mapRef.current!, c));
       return;
     }
-
     const defaultCenter: [number, number] = gpsPos
       ? [gpsPos.lat, gpsPos.lng]
       : [31.2304, 121.4737];
-
-    const map = L.map(mapContainerRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-    }).setView(defaultCenter, 14);
-
-    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-      subdomains: ['1', '2', '3', '4'],
-      maxZoom: 18,
-    }).addTo(map);
-
+    const map = L.map(mapContainerRef.current, { zoomControl: false, attributionControl: false }).setView(defaultCenter, 14);
+    L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', { subdomains: ['1', '2', '3', '4'], maxZoom: 18 }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.attribution({ position: 'bottomleft', prefix: '© 高德地图' }).addTo(map);
-
     checkins.forEach(c => addMarker(map, c));
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    setMapReady(true);
+    return () => { map.remove(); mapRef.current = null; setMapReady(false); };
   }, [viewMode, checkins, gpsPos]);
 
   // Current location marker (independent of checkin markers)
