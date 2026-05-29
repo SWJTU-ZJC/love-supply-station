@@ -175,7 +175,8 @@ const STORAGE_KEY = 'love-supply-data';
 const MIGRATED_KEY = 'love-supply-idb-migrated';
 
 function stateWithoutPhotos(state: SharedState): Omit<SharedState, 'photos'> & { photos: never[] } {
-  return { ...state, photos: [] };
+  const slimCheckins = state.checkins.map((c: any) => ({ ...c, imageUrl: '' }));
+  return { ...state, photos: [], checkins: slimCheckins };
 }
 
 function loadLocal(): SharedState {
@@ -277,7 +278,7 @@ function slimForSync(state: SharedState): SharedState {
   const trimmedCheckins = sortedCheckins.slice(0, maxCheckins);
   return {
     ...state,
-    checkins: trimmedCheckins,
+    checkins: trimmedCheckins.map((c: any) => ({ ...c, imageUrl: '' })),
   };
 }
 

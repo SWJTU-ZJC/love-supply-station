@@ -40,7 +40,7 @@ export default function TabBar() {
           >
             <span className={`leading-none ${isPixel || isAnimal ? '' : 'text-2xl'}`}>
               {isPixel ? (
-                <PixelSprite name={tab.sprite} size={32} />
+                <PixelSprite name={tab.sprite} size={38} />
               ) : isAnimal ? (
                 <AnimalIcon name={tab.animalIcon} size={28} />
               ) : (
