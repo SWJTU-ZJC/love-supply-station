@@ -95,7 +95,7 @@ export default function ProfilePage() {
           >
             <div className="mb-1 flex justify-center">
               {isPixel ? (
-                <PixelSprite name={stat.pixelSprite} size={48} />
+                <PixelSprite name={stat.pixelSprite} size={64} />
               ) : isAnimal ? (
                 <AnimalIcon name={stat.animalIcon} size={32} />
               ) : (

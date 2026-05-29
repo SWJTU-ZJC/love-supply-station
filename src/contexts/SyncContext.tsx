@@ -123,7 +123,7 @@ interface CachedUrl { url: string; expiresAt: number; }
 // ========== IndexedDB photo storage ==========
 
 const DB_NAME = 'love-supply-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const PHOTO_STORE = 'photos';
 
 function openDB(): Promise<IDBDatabase> {
