@@ -59,6 +59,7 @@ export default function GachaPage() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<GachaItem | null>(null);
   const [scratched, setScratched] = useState(false);
+  const [dropColor, setDropColor] = useState(tc.primary);
   const [tab, setTab] = useState<'gacha' | 'backpack'>('gacha');
   const scratchCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -70,6 +71,10 @@ export default function GachaPage() {
 
   const handleSpin = () => {
     if (spinning || myCoins < cost) return;
+    const colors = isAnimal
+      ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266']
+      : [tc.primary, tc.accent, tc.blue, tc.green];
+    setDropColor(colors[Math.floor(Math.random() * colors.length)]);
     setSpinning(true);
     updateCoins(myCoins - cost);
 
@@ -229,75 +234,60 @@ export default function GachaPage() {
                           }`}>
               <div className={`absolute top-0 w-full h-32 rounded-t-card ${isAnimal ? 'bg-white/20' : 'bg-gradient-to-b from-blush/10 to-transparent'}`} />
               <div className="relative z-10 mb-4">
-                {isAnimal ? (
-                  /* CSS Gacha Machine with glass dome */
-                  <div className="relative flex flex-col items-center">
-                    {/* Glass dome */}
-                    <div className={`relative w-36 h-28 overflow-hidden rounded-t-full border-[3px] border-white/50 bg-white/15`}
-                         style={{ borderBottom: 'none' }}>
-                      {/* Capsules inside dome */}
-                      {[
-                        { color: '#f8a6b2', x: 8, y: 10, size: 12, delay: 0 },
-                        { color: '#82d5bb', x: 30, y: 5, size: 14, delay: 0.3 },
-                        { color: '#f7cd67', x: 55, y: 15, size: 11, delay: 0.6 },
-                        { color: '#b77dee', x: 75, y: 3, size: 13, delay: 0.9 },
-                        { color: '#889df0', x: 95, y: 12, size: 10, delay: 1.2 },
-                        { color: '#e59266', x: 110, y: 6, size: 14, delay: 1.5 },
-                        { color: '#f8a6b2', x: 20, y: 40, size: 12, delay: 0.2 },
-                        { color: '#f7cd67', x: 50, y: 38, size: 13, delay: 0.5 },
-                        { color: '#b77dee', x: 80, y: 42, size: 11, delay: 0.8 },
-                        { color: '#82d5bb', x: 100, y: 35, size: 12, delay: 1.1 },
-                      ].map((capsule, i) => (
+                {/* CSS Gacha Machine — renders for ALL modes */}
+                <div className="relative flex flex-col items-center">
+                  {/* Glass dome */}
+                  <div className={`relative w-36 h-28 overflow-hidden rounded-t-full border-[3px] ${isAnimal ? 'border-white/50 bg-white/15' : 'border-blush/30 bg-blush/5'}`}
+                       style={{ borderBottom: 'none' }}>
+                    {/* Capsules inside dome */}
+                    {(isAnimal
+                      ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266','#f8a6b2','#f7cd67','#b77dee','#82d5bb']
+                      : [tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent]
+                    ).map((color, i) => {
+                      const x = [8,30,55,75,95,110,20,50,80,100];
+                      const y = [10,5,15,3,12,6,40,38,42,35];
+                      const s = [12,14,11,13,10,14,12,13,11,12];
+                      return (
                         <div
                           key={i}
-                          className={`absolute rounded-full border-2 border-white/60 ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
+                          className={`absolute rounded-full border-2 ${isAnimal ? 'border-white/60' : 'border-white/70'} ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
                           style={{
-                            background: `radial-gradient(circle at 40% 35%, ${capsule.color}99, ${capsule.color})`,
-                            width: capsule.size * 2,
-                            height: capsule.size * 2,
-                            left: capsule.x,
-                            top: capsule.y,
-                            animationDelay: `${capsule.delay}s, ${capsule.delay}s`,
-                            boxShadow: `0 2px 4px rgba(0,0,0,0.15)`,
+                            background: `radial-gradient(circle at 40% 35%, ${color}cc, ${color})`,
+                            width: s[i] * 2,
+                            height: s[i] * 2,
+                            left: x[i],
+                            top: y[i],
+                            animationDelay: `${i * 0.15}s, ${i * 0.15}s`,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
                           }}
                         />
-                      ))}
-                      {/* Glass reflection */}
-                      <div className="absolute top-2 left-3 w-10 h-6 rounded-full bg-white/25 rotate-[-15deg]" />
-                    </div>
-                    {/* Machine base */}
-                    <div className="w-36 h-4 bg-white/25 rounded-b-lg border-x-2 border-b-2 border-white/40" />
-                    {/* Prize chute */}
-                    <div className="w-8 h-5 bg-[#5a3a1e]/20 rounded-b-lg border-2 border-white/30 mt-[-1px]" />
-                    {/* Chute opening */}
-                    <div className={`w-5 h-3 bg-[#3d2810]/30 rounded-b-md mt-[-1px] ${spinning ? '' : ''}`}>
-                      {spinning && (
-                        <div className="w-3 h-3 rounded-full bg-[#f7cd67] mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]" />
-                      )}
-                    </div>
+                      );
+                    })}
+                    {/* Glass reflection */}
+                    <div className="absolute top-2 left-3 w-10 h-6 rounded-full bg-white/25 rotate-[-15deg]" />
                   </div>
-                ) : (
-                  spinning ? (
-                    <div className="text-6xl animate-[shake_0.1s_ease-in-out_infinite]">🥚</div>
-                  ) : (
-                    <div className="text-6xl animate-[float_3s_ease-in-out_infinite]">🥚</div>
-                  )
-                )}
+                  {/* Machine base */}
+                  <div className={`w-36 h-4 rounded-b-lg border-x-2 border-b-2 ${isAnimal ? 'bg-white/25 border-white/40' : 'bg-blush/10 border-blush/20'}`} />
+                  {/* Prize chute */}
+                  <div className={`w-8 h-5 rounded-b-lg border-2 mt-[-1px] ${isAnimal ? 'bg-[#5a3a1e]/20 border-white/30' : 'bg-blush/10 border-blush/20'}`} />
+                  {/* Chute with random-color dropping capsule */}
+                  <div className={`w-5 h-3 rounded-b-md mt-[-1px] ${isAnimal ? 'bg-[#3d2810]/30' : 'bg-blush/10'}`}>
+                    {spinning && (
+                      <div className="w-3 h-3 rounded-full mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
+                           style={{ background: `radial-gradient(circle at 40% 35%, ${dropColor}cc, ${dropColor})` }} />
+                    )}
+                  </div>
+                </div>
               </div>
-              {isAnimal ? (
-                <div className="flex flex-wrap justify-center gap-1 px-4 z-10 mb-3">
-                  {[0,1,2,3,4,5,6,7].map(i => (
-                    <div key={i} className="w-3 h-3 rounded-full opacity-60"
-                         style={{ background: ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266','#f8a6b2','#82d5bb'][i] }} />
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-wrap justify-center gap-1 px-4 z-10 mb-3">
-                  {['🔴', '🔵', '🟡', '🟢', '🟣', '🟠', '🔴', '🔵'].map((c, i) => (
-                    <span key={i} className="text-sm opacity-60">{c}</span>
-                  ))}
-                </div>
-              )}
+              {/* Decorative dots */}
+              <div className="flex flex-wrap justify-center gap-1 px-4 z-10 mb-3">
+                {(isAnimal
+                  ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266','#f8a6b2','#82d5bb']
+                  : [tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent, tc.blue, tc.green]
+                ).map((c, i) => (
+                  <div key={i} className="w-3 h-3 rounded-full opacity-60" style={{ background: c }} />
+                ))}
+              </div>
               <div className={`z-10 rounded-btn px-4 py-1.5 text-sm ${
                 isAnimal
                   ? 'bg-white/60 border-2 border-white/50 text-[#725d42]'
