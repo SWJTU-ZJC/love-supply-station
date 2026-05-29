@@ -149,201 +149,246 @@
 }
 
 /* ========== UI Mode: 动森风 Animal Crossing Style ========== */
-/* Design tokens from animal-island-ui */
+/* Design system from animal-island-ui — physical paper-cutout aesthetic */
 [data-ui="animal"] {
-  --radius-card: 24px;
-  --radius-sm-card: 18px;
-  --radius-btn: 18px;
-  --shadow-card: 0 3px 10px rgba(61,52,40,0.10);
-  --shadow-card-lg: 0 8px 24px rgba(61,52,40,0.14);
+  --radius-card: 20px;
+  --radius-sm-card: 16px;
+  --radius-btn: 50px;
+  --shadow-card: 0 4px 0 0 #bdaea0, 0 3px 10px rgba(61,52,40,0.08);
+  --shadow-card-lg: 0 6px 0 0 #bdaea0, 0 8px 24px rgba(61,52,40,0.12);
 }
 
-/* Animal: font — Zen Maru Gothic + Nunito for hand-drawn warmth */
+/* ===== Typography ===== */
 [data-ui="animal"] body {
   font-family: 'Nunito', 'Zen Maru Gothic', 'Noto Sans SC', 'PingFang SC', sans-serif;
   background-color: #f8f8f0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+[data-ui="animal"] .font-title {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #725d42;
 }
 
-/* Animal: page shell — warm cream paper */
+/* ===== Text colors ===== */
+[data-ui="animal"] .text-text-primary { color: #725d42; }
+[data-ui="animal"] .text-text-secondary { color: #9f927d; }
+[data-ui="animal"] .text-blush { color: #19c8b9; }
+[data-ui="animal"] .text-sunset { color: #e0894a; }
+[data-ui="animal"] .text-red-400 { color: #e05a5a; }
+
+/* ===== Page shell ===== */
 [data-ui="animal"] .app-shell {
   background: #f8f8f0;
+  box-shadow: 0 0 60px rgba(61,52,40,0.06);
 }
 
-/* Animal: cards — 2px solid border + warm shadow, like physical stickers */
+/* ===== Cards — paper cutout with thick bottom shadow ===== */
+[data-ui="animal"] .rounded-card,
+[data-ui="animal"] .rounded-sm-card {
+  border-radius: 20px;
+  box-shadow: 0 4px 0 0 #bdaea0, 0 3px 10px rgba(61,52,40,0.08);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 [data-ui="animal"] .bg-white.rounded-card,
 [data-ui="animal"] .bg-white.rounded-sm-card {
-  background: #fefdf8;
-  border: 2px solid #e8e2d6;
-  box-shadow: 0 3px 10px rgba(61,52,40,0.10);
+  background: rgb(247, 243, 223);
+  border: 2px solid #e8dcc8;
+  color: #725d42;
 }
 [data-ui="animal"] .bg-white.rounded-card:hover,
 [data-ui="animal"] .bg-white.rounded-sm-card:hover {
-  border-color: #d5cebc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 0 #bdaea0, 0 6px 18px rgba(61,52,40,0.12);
 }
 
-/* Animal: TabBar — parchment strip with top border */
+/* Card with gradient backgrounds — keep paper feel */
+[data-ui="animal"] .bg-gradient-to-r.from-blush\/20.to-sunset\/20 {
+  background: linear-gradient(135deg, rgba(130,213,187,0.2), rgba(247,205,103,0.18));
+  border: 2px solid #e8dcc8;
+  border-radius: 20px;
+  box-shadow: 0 4px 0 0 #bdaea0, 0 3px 10px rgba(61,52,40,0.08);
+}
+
+/* ===== Buttons — NookPhone style ===== */
+[data-ui="animal"] button {
+  font-family: 'Nunito', 'Zen Maru Gothic', 'Noto Sans SC', 'PingFang SC', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+[data-ui="animal"] button:focus-visible {
+  outline: 2px solid #19c8b9;
+  outline-offset: 2px;
+}
+[data-ui="animal"] button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary action buttons — dark-on-light with thick bottom shadow */
+[data-ui="animal"] .btn-gradient {
+  background: #f8f8f0;
+  color: #794f27;
+  border: 2px solid #d5c4a8;
+  border-radius: 50px;
+  box-shadow: 0 5px 0 0 #bdaea0;
+  letter-spacing: 0.03em;
+  background-image: none;
+}
+[data-ui="animal"] .btn-gradient:hover {
+  background: #fefdf8;
+  color: #5a3a1e;
+  border-color: #c4a88c;
+  box-shadow: 0 6px 0 0 #bdaea0;
+  transform: translateY(-1px);
+}
+[data-ui="animal"] .btn-gradient:active {
+  box-shadow: 0 1px 0 0 #bdaea0;
+  transform: translateY(4px);
+}
+[data-ui="animal"] .btn-gradient:disabled {
+  background: #f0ece2;
+  color: #c4b89e;
+  border-color: #e8e2d6;
+  box-shadow: 0 2px 0 0 #d5cebc;
+  transform: none;
+}
+
+/* Secondary/ghost buttons */
+[data-ui="animal"] button.bg-apricot\/50,
+[data-ui="animal"] button.hover\:bg-apricot\/30,
+[data-ui="animal"] button.hover\:bg-apricot {
+  border-radius: 50px;
+  font-weight: 600;
+}
+[data-ui="animal"] button.bg-gray-100 {
+  background: #f0ece2;
+  color: #c4b89e;
+  border-radius: 50px;
+  font-weight: 600;
+}
+
+/* ===== TabBar — paper strip ===== */
 [data-ui="animal"] .TabBar {
-  background: rgba(248,248,240,0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 2px solid #e8e2d6;
+  background: rgba(248,248,240,0.94);
+  border-top: 2px solid #e8dcc8;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 -2px 10px rgba(61,52,40,0.04);
 }
 [data-ui="animal"] .bg-cream\/70 {
   background: rgba(248,248,240,0.88);
 }
 
-/* Animal: buttons — warm, tactile, 2px border */
-[data-ui="animal"] button {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 700;
+/* TabBar active tab — colored sticker */
+[data-ui="animal"] .TabBar button {
+  border-radius: 40px;
+  font-weight: 600;
+  border: 2px solid transparent;
+  letter-spacing: 0.02em;
 }
-[data-ui="animal"] button:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.04);
-}
-[data-ui="animal"] button:active {
-  transform: translateY(0);
-  filter: brightness(0.96);
-}
-/* btn-gradient override: warm teal solid instead of pink gradient */
-[data-ui="animal"] .btn-gradient {
-  background: #19c8b9;
-  border: 2px solid #14b5a7;
-  border-radius: 18px;
-  box-shadow: 0 3px 10px rgba(25,200,185,0.25);
-}
-[data-ui="animal"] .btn-gradient:hover {
-  background: #3dd4c6;
-  border-color: #19c8b9;
-  box-shadow: 0 6px 18px rgba(25,200,185,0.35);
-}
-[data-ui="animal"] .btn-gradient:active {
-  background: #50B9AB;
-}
-[data-ui="animal"] .btn-gradient:disabled {
-  background: #c4b89e;
-  border-color: #aaa69d;
-  box-shadow: none;
-  opacity: 0.6;
-}
-
-/* Animal: TabBar active tab — teal accent */
 [data-ui="animal"] .TabBar button.bg-blush\/20 {
-  background: rgba(25,200,185,0.15);
-  border: 2px solid rgba(25,200,185,0.3);
-  border-radius: 18px;
-}
-
-/* Animal: title font — extra playful */
-[data-ui="animal"] .font-title {
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #794f27;
-}
-
-/* Animal: text colors — warm brown palette */
-[data-ui="animal"] .text-text-primary {
-  color: #794f27;
-}
-[data-ui="animal"] .text-text-secondary {
-  color: #9f927d;
-}
-[data-ui="animal"] .text-blush {
-  color: #19c8b9;
-}
-[data-ui="animal"] .text-sunset {
-  color: #e0894a;
-}
-
-/* Animal: ring/border accent — teal instead of pink */
-[data-ui="animal"] .ring-blush\/40 {
-  --tw-ring-color: rgba(25,200,185,0.4);
-}
-[data-ui="animal"] .ring-blush\/20 {
-  --tw-ring-color: rgba(25,200,185,0.2);
-}
-
-/* Animal: bg accent — warm tones */
-[data-ui="animal"] .bg-blush\/20 {
   background: rgba(25,200,185,0.12);
-}
-[data-ui="animal"] .bg-sunset\/10 {
-  background: rgba(224,137,74,0.1);
-}
-[data-ui="animal"] .bg-sunset\/20 {
-  background: rgba(224,137,74,0.15);
-}
-[data-ui="animal"] .bg-apricot {
-  background: #f0e8d8;
-}
-[data-ui="animal"] .bg-apricot\/30 {
-  background: rgba(240,232,216,0.3);
-}
-[data-ui="animal"] .bg-apricot\/50 {
-  background: rgba(240,232,216,0.5);
-}
-[data-ui="animal"] .hover\:bg-apricot\/30:hover {
-  background: rgba(240,232,216,0.3);
+  border-color: rgba(25,200,185,0.25);
+  transform: scale(1.05);
 }
 
-/* Animal: inputs — bordered with warm tones */
+/* ===== TabBar icons — sticker badge style ===== */
+[data-ui="animal"] .TabBar span.text-2xl {
+  filter: drop-shadow(0 2px 2px rgba(61,52,40,0.12));
+  font-size: 1.4rem;
+}
+
+/* ===== Inputs — warm bordered ===== */
 [data-ui="animal"] input[type="text"],
 [data-ui="animal"] input[type="number"],
 [data-ui="animal"] textarea {
-  border: 2px solid #e8e2d6;
-  border-radius: 18px;
+  border: 2px solid #d5c4a8;
+  border-radius: 20px;
   background: #fefdf8;
-  color: #794f27;
+  color: #725d42;
+  font-family: 'Nunito', 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
 }
 [data-ui="animal"] input:focus,
 [data-ui="animal"] textarea:focus {
   border-color: #19c8b9;
-  --tw-ring-color: rgba(25,200,185,0.2);
+  box-shadow: 0 0 0 3px rgba(25,200,185,0.12);
+  outline: none;
 }
 
-/* Animal: modals — thick border, warm shadow */
+/* ===== Modals — thick border popup ===== */
 [data-ui="animal"] .fixed.inset-0.bg-black\/20 {
-  background: rgba(61,52,40,0.25);
+  background: rgba(61,52,40,0.3);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-[data-ui="animal"] .rounded-t-card {
-  border: 2px solid #e8e2d6;
-  border-bottom: none;
-}
-
-/* Animal: badges / pills */
-[data-ui="animal"] .rounded-full {
+[data-ui="animal"] .fixed .bg-white.rounded-t-card,
+[data-ui="animal"] .fixed .bg-white.rounded-card {
+  background: rgb(247, 243, 223);
+  border: 3px solid #d5c4a8;
   border-radius: 24px;
+  box-shadow: 0 8px 0 0 #bdaea0, 0 12px 30px rgba(61,52,40,0.18);
 }
 
-/* Animal: mood bar */
-[data-ui="animal"] .bg-blush\/20.rounded-full {
-  background: rgba(25,200,185,0.08);
-  border: 2px solid rgba(25,200,185,0.15);
-}
-
-/* Animal: coin display */
+/* ===== Pills / badges / coin display ===== */
 [data-ui="animal"] .bg-white.rounded-full {
   background: #fefdf8;
-  border: 2px solid #e8e2d6;
+  border: 2px solid #e8dcc8;
+  border-radius: 50px;
+  box-shadow: 0 2px 0 0 #d5cebc;
 }
 
-/* Animal: gradient backgrounds — warm parchment */
-[data-ui="animal"] .bg-gradient-to-r.from-blush\/20.to-sunset\/20 {
-  background: linear-gradient(to right, rgba(25,200,185,0.1), rgba(224,137,74,0.1));
-  border: 2px solid #e8e2d6;
+/* ===== Mood bar ===== */
+[data-ui="animal"] .bg-blush\/20.rounded-full {
+  background: rgba(25,200,185,0.06);
+  border: 2px solid rgba(25,200,185,0.2);
+  border-radius: 50px;
 }
 
-/* Animal: feature grid cards */
+/* ===== Feature grid / icon cards ===== */
 [data-ui="animal"] .grid .rounded-2xl {
   border-radius: 18px;
 }
-
-/* Animal: image grid — 18px radius */
 [data-ui="animal"] .grid .rounded-xl {
-  border-radius: 18px;
+  border-radius: 16px;
+}
+
+/* ===== Profile avatar ring ===== */
+[data-ui="animal"] .ring-blush\/20 {
+  --tw-ring-color: rgba(25,200,185,0.2);
+  box-shadow: 0 3px 0 0 rgba(25,200,185,0.15);
+}
+
+/* ===== Apricot bg overrides ===== */
+[data-ui="animal"] .bg-apricot { background: #f0e8d8; }
+[data-ui="animal"] .bg-apricot\/50 { background: rgba(240,232,216,0.5); }
+[data-ui="animal"] .bg-apricot\/30 { background: rgba(240,232,216,0.3); }
+[data-ui="animal"] .bg-sunset\/10 { background: rgba(224,137,74,0.08); }
+[data-ui="animal"] .bg-sunset\/20 { background: rgba(224,137,74,0.14); }
+[data-ui="animal"] .bg-blush\/20 { background: rgba(25,200,185,0.1); }
+
+/* ===== Divider lines ===== */
+[data-ui="animal"] .border-apricot\/30 {
+  border-color: #e8dcc8;
+}
+[data-ui="animal"] .border-blush\/20 {
+  border-color: rgba(25,200,185,0.15);
+}
+[data-ui="animal"] .border-blush\/30 {
+  border-color: rgba(25,200,185,0.2);
+}
+
+/* ===== HomePage emoji — sticker style ===== */
+[data-ui="animal"] .animate-\[float_3s_ease-in-out_infinite\] {
+  filter: drop-shadow(0 3px 3px rgba(61,52,40,0.15));
+}
+
+/* ===== Scrollbar ===== */
+[data-ui="animal"] ::-webkit-scrollbar-thumb {
+  background: #d5c4a8;
+  border-radius: 50px;
 }
 
 /* ========== Base ========== */
