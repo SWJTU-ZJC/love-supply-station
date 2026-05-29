@@ -37,6 +37,7 @@ export default function MapPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedCheckin, setSelectedCheckin] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [showCheckins, setShowCheckins] = useState(true);
   const [newNote, setNewNote] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState('');
@@ -168,21 +169,24 @@ export default function MapPage() {
     if (partnerMarkerRef.current) { partnerMarkerRef.current.remove(); partnerMarkerRef.current = null; }
     if (!partnerLocation || !partner) return;
     const partnerAvatar = isPixel ? spriteUrl(getAvatarSprite(partner.avatar)) : '';
+    const secondsAgo = Math.floor((Date.now() - partnerLocation.updatedAt) / 1000);
+    const timeStr = secondsAgo < 60 ? `${secondsAgo}秒前` : `${Math.floor(secondsAgo / 60)}分钟前`;
     const icon = L.divIcon({
-      html: `<div style="
-        width:44px;height:44px;border-radius:50%;
-        background:#FF6B8A;
-        display:flex;align-items:center;justify-content:center;
-        font-size:22px;
-        border:3px solid white;
-        box-shadow:0 0 16px rgba(255,107,138,0.6);
-      ">${isPixel ? `<img src='${partnerAvatar}' width=34 height=34 style='image-rendering:pixelated;display:block'>` : (partner.avatar || '💕')}</div>`,
+      html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center">
+        <div style="
+          width:52px;height:52px;border-radius:50%;
+          background:#FF6B8A;
+          display:flex;align-items:center;justify-content:center;
+          border:3px solid white;
+          animation:partnerPulse 2s ease-out infinite;
+        ">${isPixel ? `<img src='${partnerAvatar}' width=40 height=40 style='image-rendering:pixelated;display:block;border-radius:50%'>` : `<span style="font-size:26px">${partner.avatar || '💕'}</span>`}</div>
+        <span style="background:#FF6B8A;color:white;font-size:10px;padding:1px 8px;border-radius:8px;margin-top:-2px;white-space:nowrap;font-family:'PingFang SC','Microsoft YaHei',sans-serif">Ta · ${timeStr}</span>
+      </div>`,
       className: 'partner-marker',
-      iconSize: [44, 44],
-      iconAnchor: [22, 22],
+      iconSize: [52, 70],
+      iconAnchor: [26, 35],
     });
     partnerMarkerRef.current = L.marker([partnerLocation.lat, partnerLocation.lng], { icon, zIndexOffset: 2000 }).addTo(map);
-    partnerMarkerRef.current.bindPopup(`<b>${partner.nickname}在这里</b><br/>${new Date(partnerLocation.updatedAt).toLocaleTimeString('zh-CN')}`);
   };
 
   useEffect(() => {
@@ -191,7 +195,7 @@ export default function MapPage() {
       mapRef.current.invalidateSize();
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
-      checkins.forEach(c => addMarker(mapRef.current!, c));
+      if (showCheckins) checkins.forEach(c => addMarker(mapRef.current!, c));
       addPartnerMarker(mapRef.current!);
       return;
     }
@@ -202,12 +206,12 @@ export default function MapPage() {
     L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', { subdomains: ['1', '2', '3', '4'], maxZoom: 18 }).addTo(map);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.attribution({ position: 'bottomleft', prefix: '© 高德地图' }).addTo(map);
-    checkins.forEach(c => addMarker(map, c));
+    if (showCheckins) checkins.forEach(c => addMarker(map, c));
     addPartnerMarker(map);
     mapRef.current = map;
     setMapReady(true);
     return () => { map.remove(); mapRef.current = null; setMapReady(false); };
-  }, [viewMode, checkins, gpsPos, partnerLocation, partner, isPixel, user]);
+  }, [viewMode, checkins, gpsPos, partnerLocation, partner, isPixel, user, showCheckins]);
 
   // Current location marker (independent of checkin markers)
   useEffect(() => {
@@ -323,6 +327,19 @@ export default function MapPage() {
       >
         {viewMode === 'map' ? '📋 列表' : '🗺️ 地图'}
       </button>
+
+      {/* Check-in markers toggle (map view only) */}
+      {viewMode === 'map' && (
+        <button
+          onClick={() => setShowCheckins(s => !s)}
+          className={`absolute top-16 right-4 z-[1000] rounded-full px-4 py-2
+                     shadow-soft text-sm font-semibold transition-all ${
+                       showCheckins ? 'bg-white text-text-primary' : 'bg-gray-200 text-text-secondary'
+                     }`}
+        >
+          📍 打卡 {showCheckins ? '显示中' : '已隐藏'}
+        </button>
+      )}
 
       {/* GPS status + coins */}
       <div className="absolute top-4 left-4 z-[1000] flex items-center gap-2">
