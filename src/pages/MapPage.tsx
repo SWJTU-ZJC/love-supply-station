@@ -90,78 +90,69 @@ export default function MapPage() {
   const checkins = state.checkins || [];
   const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 5;
 
-  const getPos = useCallback(async () => {
+  // Convert GPS → Amap GCJ02
+  const convertAmap = async (lng: number, lat: number): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const res = await fetch(`https://restapi.amap.com/v3/assistant/coordinate/convert?key=a7beac025cbc7c2c55d5517c82d03b44&locations=${lng},${lat}&coordsys=gps&output=json`);
+      const d = await res.json();
+      if (d.status === '1' && d.locations) {
+        const [lng2, lat2] = d.locations.split(',').map(Number);
+        return { lat: lat2, lng: lng2 };
+      }
+    } catch {}
+    return null;
+  };
+
+  // Continuous GPS tracking with watchPosition
+  useEffect(() => {
     setGpsErr('');
-    // Try browser GPS first (high accuracy)
-    const tryGPS = (): Promise<{ lat: number; lng: number } | null> => new Promise(resolve => {
-      if (!navigator.geolocation) { resolve(null); return; }
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
-      );
-    });
-    // Amap coordinate convert (GPS → GCJ02 for better map alignment)
-    const convertAmap = async (lng: number, lat: number): Promise<{ lat: number; lng: number } | null> => {
-      try {
-        const res = await fetch(`https://restapi.amap.com/v3/assistant/coordinate/convert?key=a7beac025cbc7c2c55d5517c82d03b44&locations=${lng},${lat}&coordsys=gps&output=json`);
-        const d = await res.json();
-        if (d.status === '1' && d.locations) {
-          const [lng2, lat2] = d.locations.split(',').map(Number);
-          return { lat: lat2, lng: lng2 };
-        }
-      } catch {}
-      return null;
-    };
-    // Amap IP fallback when GPS fails
-    const tryAmapIP = async (): Promise<{ lat: number; lng: number } | null> => {
-      try {
-        const res = await fetch(`https://restapi.amap.com/v3/ip?key=a7beac025cbc7c2c55d5517c82d03b44`);
-        const d = await res.json();
-        if (d.status === '1' && d.rectangle) {
-          const [lng1, lat1, lng2, lat2] = d.rectangle.split(';')[0].split(',').map(Number);
-          return { lat: (lat1 + lat2) / 2, lng: (lng1 + lng2) / 2 };
-        }
-      } catch {}
-      return null;
+    let watchId: number | null = null;
+    let mounted = true;
+
+    const handlePosition = async (pos: GeolocationPosition) => {
+      if (!mounted) return;
+      const gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      const converted = await convertAmap(gps.lng, gps.lat);
+      if (mounted) {
+        setGpsPos(converted || gps);
+        setGpsErr('');
+      }
     };
 
-    const gpsResult = await tryGPS();
-    if (gpsResult) {
-      const converted = await convertAmap(gpsResult.lng, gpsResult.lat);
-      if (converted) {
-        setGpsPos(converted);
-      } else {
-        setGpsPos(gpsResult);
-      }
-      setGpsErr('');
-      return;
-    }
-    // Fallback to Amap IP
-    const ipResult = await tryAmapIP();
-    if (ipResult) {
-      setGpsPos(ipResult);
-      setGpsErr('IP粗略定位');
+    if (!navigator.geolocation) {
+      setGpsErr('设备不支持定位');
+      // Amap IP fallback
+      (async () => {
+        try {
+          const res = await fetch(`https://restapi.amap.com/v3/ip?key=a7beac025cbc7c2c55d5517c82d03b44`);
+          const d = await res.json();
+          if (d.status === '1' && d.rectangle && mounted) {
+            const [lng1, lat1, lng2, lat2] = d.rectangle.split(';')[0].split(',').map(Number);
+            setGpsPos({ lat: (lat1 + lat2) / 2, lng: (lng1 + lng2) / 2 });
+            setGpsErr('IP粗略定位');
+          }
+        } catch {}
+      })();
     } else {
-      setGpsErr('定位失败，请检查权限');
+      watchId = navigator.geolocation.watchPosition(
+        handlePosition,
+        () => setGpsErr('定位失败，请检查权限'),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+      );
     }
+
+    return () => { mounted = false; if (watchId != null) navigator.geolocation.clearWatch(watchId); };
   }, []);
 
-  useEffect(() => {
-    getPos();
-  }, [getPos]);
-
-  // Upload GPS position every 30 seconds
+  // Upload GPS position continuously
   useEffect(() => {
     if (!gpsPos) return;
-    const upload = () => {
-      const g = gpsRef.current;
-      if (g) updatePartnerLocation(g.lat, g.lng);
-    };
-    upload();
-    const timer = setInterval(upload, 30000);
+    updatePartnerLocation(gpsPos.lat, gpsPos.lng);
+    const timer = setInterval(() => {
+      if (gpsRef.current) updatePartnerLocation(gpsRef.current.lat, gpsRef.current.lng);
+    }, 10000);
     return () => clearInterval(timer);
-  }, [!!gpsPos, updatePartnerLocation]);
+  }, [gpsPos, updatePartnerLocation]);
 
   const partnerLocation = (state.partnerLocations || []).find(l => l.userId !== user?.id);
 
