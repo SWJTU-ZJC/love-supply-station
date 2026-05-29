@@ -162,39 +162,29 @@ export default function MapPage() {
     return () => clearInterval(timer);
   }, [!!gpsPos, updatePartnerLocation]);
 
-  // Display partner's location on map
   const partnerLocation = (state.partnerLocations || []).find(l => l.userId !== user?.id);
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !partnerLocation || !partner || viewMode !== 'map') {
-      if (partnerMarkerRef.current) { partnerMarkerRef.current.remove(); partnerMarkerRef.current = null; }
-      return;
-    }
-    const partnerAvatar = isPixel
-      ? spriteUrl(getAvatarSprite(partner.avatar))
-      : '';
+
+  const addPartnerMarker = (map: L.Map) => {
+    if (partnerMarkerRef.current) { partnerMarkerRef.current.remove(); partnerMarkerRef.current = null; }
+    if (!partnerLocation || !partner) return;
+    const partnerAvatar = isPixel ? spriteUrl(getAvatarSprite(partner.avatar)) : '';
     const icon = L.divIcon({
       html: `<div style="
-        width:40px;height:40px;border-radius:50%;
+        width:44px;height:44px;border-radius:50%;
         background:#FF6B8A;
         display:flex;align-items:center;justify-content:center;
-        font-size:20px;
+        font-size:22px;
         border:3px solid white;
-        box-shadow:0 0 12px rgba(255,107,138,0.5);
-      ">${isPixel ? `<img src='${partnerAvatar}' width=32 height=32 style='image-rendering:pixelated;display:block'>` : (partner.avatar || '💕')}</div>`,
+        box-shadow:0 0 16px rgba(255,107,138,0.6);
+      ">${isPixel ? `<img src='${partnerAvatar}' width=34 height=34 style='image-rendering:pixelated;display:block'>` : (partner.avatar || '💕')}</div>`,
       className: 'partner-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
     });
-    if (partnerMarkerRef.current) {
-      partnerMarkerRef.current.setLatLng([partnerLocation.lat, partnerLocation.lng]);
-    } else {
-      partnerMarkerRef.current = L.marker([partnerLocation.lat, partnerLocation.lng], { icon, zIndexOffset: 2000 }).addTo(map);
-      partnerMarkerRef.current.bindPopup(`<b>${partner.nickname}</b><br/>${new Date(partnerLocation.updatedAt).toLocaleTimeString('zh-CN')}`);
-    }
-  }, [partnerLocation, partner, viewMode, mapReady, isPixel, user]);
+    partnerMarkerRef.current = L.marker([partnerLocation.lat, partnerLocation.lng], { icon, zIndexOffset: 2000 }).addTo(map);
+    partnerMarkerRef.current.bindPopup(`<b>${partner.nickname}在这里</b><br/>${new Date(partnerLocation.updatedAt).toLocaleTimeString('zh-CN')}`);
+  };
 
-  // Map initialization (must be after partner display useEffect)
   useEffect(() => {
     if (viewMode !== 'map' || !mapContainerRef.current) return;
     if (mapRef.current) {
@@ -202,6 +192,7 @@ export default function MapPage() {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
       checkins.forEach(c => addMarker(mapRef.current!, c));
+      addPartnerMarker(mapRef.current!);
       return;
     }
     const defaultCenter: [number, number] = gpsPos
@@ -212,10 +203,11 @@ export default function MapPage() {
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.control.attribution({ position: 'bottomleft', prefix: '© 高德地图' }).addTo(map);
     checkins.forEach(c => addMarker(map, c));
+    addPartnerMarker(map);
     mapRef.current = map;
     setMapReady(true);
     return () => { map.remove(); mapRef.current = null; setMapReady(false); };
-  }, [viewMode, checkins, gpsPos]);
+  }, [viewMode, checkins, gpsPos, partnerLocation, partner, isPixel, user]);
 
   // Current location marker (independent of checkin markers)
   useEffect(() => {
