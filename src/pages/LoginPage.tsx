@@ -90,7 +90,7 @@ export default function LoginPage() {
             >
               <div className="mb-2 flex justify-center">
                 {isPixel ? (
-                  <PixelSprite name="clefairy" size={64} />
+                  <PixelSprite name="clefairy" size={72} />
                 ) : (
                   <span className="text-5xl">🐰</span>
                 )}
@@ -107,7 +107,7 @@ export default function LoginPage() {
             >
               <div className="mb-2 flex justify-center">
                 {isPixel ? (
-                  <PixelSprite name="snorlax" size={64} />
+                  <PixelSprite name="snorlax" size={72} />
                 ) : (
                   <span className="text-5xl">🐻</span>
                 )}

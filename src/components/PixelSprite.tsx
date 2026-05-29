@@ -23,6 +23,10 @@ export const SPRITES = {
   map: 'map.svg',
 } as const;
 
+export function getAvatarSprite(emoji: string): keyof typeof SPRITES {
+  return emoji === '🐻' ? 'snorlax' : 'clefairy';
+}
+
 export function spriteUrl(name: keyof typeof SPRITES): string {
   return `${BASE}/${SPRITES[name]}`;
 }

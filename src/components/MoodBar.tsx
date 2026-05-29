@@ -55,7 +55,7 @@ export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: st
           >
             <span className={`transition-transform duration-300 ${isPixel ? '' : 'text-2xl'}
               ${selected === emoji ? 'scale-125' : ''}`}>
-              {isPixel ? <PixelSprite name={sprite} size={36} /> : emoji}
+              {isPixel ? <PixelSprite name={sprite} size={44} /> : emoji}
             </span>
             <span className={`text-xs transition-colors duration-300
               ${selected === emoji ? 'text-text-primary font-semibold' : 'text-text-secondary'}`}>

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTheme, themeLabels, themeColors, uiModeLabels, type Theme, type UIMode } from '../contexts/ThemeContext';
 import AnimalIcon from '../components/AnimalIcon';
-import PixelSprite from '../components/PixelSprite';
+import PixelSprite, { getAvatarSprite } from '../components/PixelSprite';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
@@ -44,7 +44,7 @@ export default function ProfilePage() {
       <div className="text-center">
         <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center
                       ring-4 ring-blush/20 shadow-soft-lg mb-4 ${isPixel ? 'bg-transparent' : 'bg-apricot'}`}>
-          {isPixel ? <PixelSprite name="clefairy" size={64} /> : <span className="text-5xl">{user.avatar}</span>}
+          {isPixel ? <PixelSprite name={getAvatarSprite(user.avatar)} size={80} /> : <span className="text-5xl">{user.avatar}</span>}
         </div>
         <h2 className="font-title text-2xl text-text-primary">{user.nickname}</h2>
         <div className="flex items-center justify-center gap-1 mt-1">
@@ -112,7 +112,7 @@ export default function ProfilePage() {
         <h3 className="font-semibold text-text-primary mb-3">我的 Ta</h3>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-apricot flex items-center justify-center">
-            {isPixel ? <PixelSprite name="snorlax" size={36} /> : <span className="text-3xl">{partner.avatar}</span>}
+            {isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={48} /> : <span className="text-3xl">{partner.avatar}</span>}
           </div>
           <div>
             <p className="font-semibold text-text-primary">{partner.nickname}</p>

@@ -133,6 +133,9 @@ function openDB(): Promise<IDBDatabase> {
       if (!req.result.objectStoreNames.contains(PHOTO_STORE)) {
         req.result.createObjectStore(PHOTO_STORE, { keyPath: 'id' });
       }
+      if (!req.result.objectStoreNames.contains(CHECKIN_IMG_STORE)) {
+        req.result.createObjectStore(CHECKIN_IMG_STORE, { keyPath: 'id' });
+      }
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -156,6 +159,56 @@ async function loadPhotosFromDB(): Promise<SharedPhoto[]> {
 }
 
 async function savePhotosToDB(photos: SharedPhoto[]): Promise<void> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(PHOTO_STORE, 'readwrite');
+      const store = tx.objectStore(PHOTO_STORE);
+      store.clear();
+      for (const p of photos) store.put(p);
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); resolve(); };
+    });
+  } catch {}
+}
+
+// ========== IndexedDB: check-in images ==========
+
+const CHECKIN_IMG_STORE = 'checkinImages';
+
+async function loadCheckinImagesFromDB(): Promise<Record<string, string>> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      if (!db.objectStoreNames.contains(CHECKIN_IMG_STORE)) { db.close(); resolve({}); return; }
+      const tx = db.transaction(CHECKIN_IMG_STORE, 'readonly');
+      const store = tx.objectStore(CHECKIN_IMG_STORE);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const items: { id: string; url: string }[] = req.result || [];
+        const map: Record<string, string> = {};
+        for (const item of items) map[item.id] = item.url;
+        resolve(map);
+      };
+      req.onerror = () => resolve({});
+    });
+  } catch { return {}; }
+}
+
+async function saveCheckinImageToDB(id: string, url: string): Promise<void> {
+  if (!url) return;
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      if (!db.objectStoreNames.contains(CHECKIN_IMG_STORE)) { db.close(); resolve(); return; }
+      const tx = db.transaction(CHECKIN_IMG_STORE, 'readwrite');
+      const store = tx.objectStore(CHECKIN_IMG_STORE);
+      store.put({ id, url });
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); resolve(); };
+    });
+  } catch {}
+}
   try {
     const db = await openDB();
     return new Promise((resolve) => {
@@ -325,6 +378,28 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           const merged = { ...prev, photos: [...photos, ...prev.photos.filter(p => !photos.some(mp => mp.id === p.id))] };
           return merged;
         });
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Load check-in images from IndexedDB on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const images = await loadCheckinImagesFromDB();
+      if (!mounted) return;
+      const ids = Object.keys(images);
+      if (ids.length > 0) {
+        setState(prev => ({
+          ...prev,
+          checkins: prev.checkins.map(c => {
+            if (images[c.id] && !c.imageUrl) {
+              return { ...c, imageUrl: images[c.id] };
+            }
+            return c;
+          }),
+        }));
       }
     })();
     return () => { mounted = false; };
@@ -580,6 +655,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const addCheckin = useCallback((c: Omit<SharedCheckin, 'id'>) => {
     const checkin: SharedCheckin = { ...c, id: Date.now().toString() + Math.random().toString(36).slice(2, 6) };
+    if (checkin.imageUrl) {
+      saveCheckinImageToDB(checkin.id, checkin.imageUrl);
+    }
     updateLocal(prev => ({ ...prev, checkins: [...prev.checkins, checkin] }));
   }, [updateLocal]);
 
