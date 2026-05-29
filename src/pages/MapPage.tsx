@@ -300,7 +300,10 @@ export default function MapPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
-                  {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place ? <p className="text-xs text-text-secondary mt-0.5">📍 {place}</p> : null; })()}
+                  <p className="text-xs text-text-secondary mt-0.5">
+                    📍 {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}
+                    {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place && place !== '...' ? ` - ${place}` : ''; })()}
+                  </p>
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-text-secondary">{c.createdAt}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded-full"
