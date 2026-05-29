@@ -49,7 +49,7 @@ export default function PixelSprite({ name, size = 28, className }: { name: keyo
       width={size}
       height={size}
       className={className}
-      style={{ imageRendering: 'pixelated', display: 'block', objectFit: 'contain' }}
+      style={{ imageRendering: 'pixelated', display: 'block' }}
     />
   );
 }

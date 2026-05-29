@@ -45,17 +45,23 @@ export default function MapPage() {
   const markersRef = useRef<L.Marker[]>([]);
   const locationMarkerRef = useRef<L.Marker | null>(null);
   const [placeNames, setPlaceNames] = useState<Record<string, string>>({});
+  const placeCacheRef = useRef<Record<string, string>>({});
 
   // Reverse geocode: get place name from coords
   const fetchPlaceName = async (lat: number, lng: number) => {
     const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
-    if (placeNames[key]) return;
+    if (placeCacheRef.current[key]) return;
+    placeCacheRef.current[key] = '...';
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`);
       const data = await res.json();
       const name = data.display_name || data.name || '';
-      setPlaceNames(prev => ({ ...prev, [key]: name.split(',')[0] || name }));
-    } catch {}
+      const shortName = name.split(',')[0] || name;
+      placeCacheRef.current[key] = shortName;
+      setPlaceNames(prev => ({ ...prev, [key]: shortName }));
+    } catch {
+      delete placeCacheRef.current[key];
+    }
   };
 
   // Look up place names for existing checkins

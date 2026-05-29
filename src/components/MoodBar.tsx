@@ -44,7 +44,7 @@ export default function MoodBar({ currentMood, onMoodSelect }: { currentMood: st
           <button
             key={emoji}
             onClick={() => handleMood(emoji)}
-            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[56px]
+            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl min-w-[72px]
                        transition-all duration-300
                        ${selected === emoji
                          ? 'bg-blush/20 scale-110 shadow-soft'
