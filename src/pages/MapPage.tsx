@@ -65,10 +65,11 @@ export default function MapPage() {
           return d.display_name || d.name || '';
         },
         async () => {
-          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
+          const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location=${lng},${lat}&langCode=ZH`);
           if (!res.ok) return '';
           const d = await res.json();
-          return [d.locality, d.city, d.principalSubdivision, d.countryName].filter(Boolean).join('，');
+          const addr = d.address;
+          return addr ? [addr.District, addr.City, addr.Subregion, addr.Region].filter(Boolean).join('，') : '';
         },
         async () => {
           const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=zh`);
