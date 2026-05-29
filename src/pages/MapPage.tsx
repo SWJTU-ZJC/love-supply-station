@@ -53,16 +53,38 @@ export default function MapPage() {
     if (placeCacheRef.current[key]) return;
     placeCacheRef.current[key] = '...';
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`, {
-        headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
-      });
-      if (!res.ok) { delete placeCacheRef.current[key]; return; }
-      const data = await res.json();
-      const name = (data as any).display_name || (data as any).name || '';
-      const shortName = name ? name.split(',')[0] : '';
-      if (shortName) {
-        placeCacheRef.current[key] = shortName;
-        setPlaceNames(prev => ({ ...prev, [key]: shortName }));
+      let name = '';
+      // Try multiple free geocoding APIs in order
+      const apis = [
+        async () => {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`, {
+            headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
+          });
+          if (!res.ok) return '';
+          const d = await res.json();
+          return (d.display_name || d.name || '').split(',')[0];
+        },
+        async () => {
+          const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
+          if (!res.ok) return '';
+          const d = await res.json();
+          return d.locality || d.city || d.principalSubdivision || '';
+        },
+        async () => {
+          const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1`);
+          if (!res.ok) return '';
+          const d = await res.json();
+          const f = d.features?.[0]?.properties;
+          return f ? (f.name || f.city || f.state || '') : '';
+        },
+      ];
+      for (const fn of apis) {
+        try { name = await fn(); } catch {}
+        if (name) break;
+      }
+      if (name) {
+        placeCacheRef.current[key] = name;
+        setPlaceNames(prev => ({ ...prev, [key]: name }));
       } else {
         delete placeCacheRef.current[key];
       }
