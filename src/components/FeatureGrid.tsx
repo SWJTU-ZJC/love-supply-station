@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import AnimalIcon, { type AnimalIconName } from './AnimalIcon';
+import PixelSprite from './PixelSprite';
 
 const features = [
   {
@@ -10,6 +11,7 @@ const features = [
     path: '/gacha',
     emoji: '🥚',
     animalIcon: 'shopping' as AnimalIconName,
+    pixelSprite: 'mrmime' as const,
     cardColor: '#f8a6b2',
   },
   {
@@ -19,6 +21,7 @@ const features = [
     path: '/map',
     emoji: '📍',
     animalIcon: 'map' as AnimalIconName,
+    pixelSprite: 'farfetchd' as const,
     cardColor: '#82d5bb',
   },
   {
@@ -28,6 +31,7 @@ const features = [
     path: '/little-things',
     emoji: '✅',
     animalIcon: 'critterpedia' as AnimalIconName,
+    pixelSprite: 'mew' as const,
     cardColor: '#f7cd67',
   },
 ];
@@ -36,11 +40,12 @@ export default function FeatureGrid() {
   const navigate = useNavigate();
   const { uiMode } = useTheme();
   const isAnimal = uiMode === 'animal';
+  const isPixel = uiMode === 'pixel';
 
   return (
     <div>
       <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
-        {isAnimal ? <AnimalIcon name="variant" size={24} /> : <span>🎮</span>}
+        {isPixel ? <PixelSprite name="pikachu" size={28} /> : isAnimal ? <AnimalIcon name="variant" size={24} /> : <span>🎮</span>}
         恋爱补给
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -59,7 +64,9 @@ export default function FeatureGrid() {
             }}
           >
             <div className="relative z-10">
-              {isAnimal ? (
+              {isPixel ? (
+                <PixelSprite name={feature.pixelSprite} size={56} className="mb-2" />
+              ) : isAnimal ? (
                 <AnimalIcon name={feature.animalIcon} size={36} className="mb-2" />
               ) : (
                 <span className="text-3xl block mb-2">{feature.emoji}</span>

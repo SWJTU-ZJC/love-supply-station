@@ -63,13 +63,13 @@ export default function HomePage() {
       <div className="text-center">
         <div className="flex items-center justify-center gap-1.5">
           <span className="animate-[float_3s_ease-in-out_infinite]">
-            {isPixel ? <PixelSprite name="snorlax" size={60} /> : <span className="text-2xl">🐻</span>}
+            {isPixel ? <PixelSprite name="snorlax" size={72} /> : <span className="text-2xl">🐻</span>}
           </span>
           <h1 className="font-title text-4xl bg-gradient-to-r from-blush via-sunset to-blush bg-clip-text text-transparent">
             张佳琛 & 周佳慧
           </h1>
           <span className="animate-[float_3s_ease-in-out_infinite_0.5s]">
-            {isPixel ? <PixelSprite name="jigglypuff" size={60} /> : <span className="text-2xl">🐰</span>}
+            {isPixel ? <PixelSprite name="jigglypuff" size={72} /> : <span className="text-2xl">🐰</span>}
           </span>
         </div>
         <p className="text-text-secondary text-xs mt-0.5">💕 恋爱补给站 💕</p>
@@ -104,7 +104,7 @@ export default function HomePage() {
           {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
         </p>
         <div className="flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 shadow-soft">
-          {isPixel ? <PixelSprite name="meowth" size={44} /> : <span className="text-sm">🪙</span>}
+          {isPixel ? <PixelSprite name="meowth" size={52} /> : <span className="text-sm">🪙</span>}
           <span className="font-semibold text-sunset text-sm">{myCoins}</span>
         </div>
       </div>
@@ -118,9 +118,9 @@ export default function HomePage() {
           <div className="relative">
             <div className="w-16 h-16 rounded-full bg-apricot flex items-center justify-center
                           ring-4 ring-blush/20">
-              {isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={56} /> : <span className="text-3xl">{partner.avatar}</span>}
+              {isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={64} /> : <span className="text-3xl">{partner.avatar}</span>}
             </div>
-            <div className="absolute -bottom-1 -right-1">{isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={32} /> : <span className="text-xl">{partnerMood}</span>}</div>
+            <div className="absolute -bottom-1 -right-1">{isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={40} /> : <span className="text-xl">{partnerMood}</span>}</div>
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg text-text-primary">{partner.nickname}</h3>

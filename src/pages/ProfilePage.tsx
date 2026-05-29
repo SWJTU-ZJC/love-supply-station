@@ -44,7 +44,7 @@ export default function ProfilePage() {
       <div className="text-center">
         <div className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center
                       ring-4 ring-blush/20 shadow-soft-lg mb-4 ${isPixel ? 'bg-transparent' : 'bg-apricot'}`}>
-          {isPixel ? <PixelSprite name={getAvatarSprite(user.avatar)} size={96} /> : <span className="text-5xl">{user.avatar}</span>}
+          {isPixel ? <PixelSprite name={getAvatarSprite(user.avatar)} size={108} /> : <span className="text-5xl">{user.avatar}</span>}
         </div>
         <h2 className="font-title text-2xl text-text-primary">{user.nickname}</h2>
         <div className="flex items-center justify-center gap-1 mt-1">
@@ -95,7 +95,7 @@ export default function ProfilePage() {
           >
             <div className="mb-1 flex justify-center">
               {isPixel ? (
-                <PixelSprite name={stat.pixelSprite} size={76} />
+                <PixelSprite name={stat.pixelSprite} size={84} />
               ) : isAnimal ? (
                 <AnimalIcon name={stat.animalIcon} size={32} />
               ) : (

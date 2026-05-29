@@ -420,212 +420,187 @@
   border-radius: 50px;
 }
 
-/* ========== UI Mode: 宝可梦像素风 Pokémon Pixel Style ========== */
+/* ========== UI Mode: 宝可梦风 (Pokémon HOME style) ========== */
 [data-ui="pixel"] {
-  --radius-card: 0px;
-  --radius-sm-card: 0px;
-  --radius-btn: 4px;
-  --shadow-card: none;
-  --shadow-card-lg: none;
+  --radius-card: 16px;
+  --radius-sm-card: 12px;
+  --radius-btn: 24px;
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+  --shadow-card-lg: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-/* Pixel: dark game background */
+/* Pokemon: deep blue gradient background (Pokémon HOME style) */
 [data-ui="pixel"] body {
-  font-family: 'Pixelify Sans', 'Press Start 2P', 'ZCOOL KuaiLe', monospace;
-  background: #383850;
-  color: #f8f8f8;
+  font-family: 'Nunito', 'PingFang SC', sans-serif;
+  background: linear-gradient(180deg, #1a3a6b 0%, #0d2240 100%);
+  background-attachment: fixed;
+  color: #FFFFFF;
 }
 
-/* Pixel: app shell — GBA screen */
+/* Pokemon: app shell */
 [data-ui="pixel"] .app-shell {
-  background: #383850;
-  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  background: transparent;
+  box-shadow: 0 0 60px rgba(0,0,0,0.4);
 }
 
-/* Pixel: all text gets drop shadow */
-[data-ui="pixel"] p, [data-ui="pixel"] span, [data-ui="pixel"] h1, [data-ui="pixel"] h2, [data-ui="pixel"] h3, [data-ui="pixel"] h4, [data-ui="pixel"] label, [data-ui="pixel"] input {
-  text-shadow: 2px 2px 0 #383850;
-}
-
-/* Pixel: cards — 9-slice window panels */
+/* Pokemon: cards — semi-transparent glass with rounded corners */
 [data-ui="pixel"] .bg-white.rounded-card,
 [data-ui="pixel"] .bg-white.rounded-sm-card {
-  background: #706880;
-  border: 3px solid #484868;
-  box-shadow: inset 0 0 0 1px #8888c8;
-  color: #f8f8f8;
-  border-radius: 0;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
 }
 
-/* Pixel: card with gradient — re-colored for dark theme */
+/* Pokemon: gradient cards */
 [data-ui="pixel"] .bg-gradient-to-r.from-blush\/20.to-sunset\/20 {
-  background: #706880;
-  border: 3px solid #484868;
-  box-shadow: inset 0 0 0 1px #8888c8;
-  border-radius: 0;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 16px;
 }
 
-/* Pixel: page background override */
-[data-ui="pixel"] .bg-cream {
-  background: #383850;
-}
-[data-ui="pixel"] .bg-apricot { background: #585870; }
-[data-ui="pixel"] .bg-apricot\/30 { background: rgba(88,88,112,0.3); }
-[data-ui="pixel"] .bg-apricot\/50 { background: rgba(88,88,112,0.5); }
-[data-ui="pixel"] .bg-blush\/20 { background: rgba(136,136,200,0.15); }
-[data-ui="pixel"] .bg-sunset\/10 { background: rgba(248,176,80,0.08); }
-[data-ui="pixel"] .bg-sunset\/20 { background: rgba(248,176,80,0.14); }
+/* Pokemon: page backgrounds */
+[data-ui="pixel"] .bg-cream { background: transparent; }
+[data-ui="pixel"] .bg-apricot { background: rgba(255,255,255,0.06); }
+[data-ui="pixel"] .bg-apricot\/30 { background: rgba(255,255,255,0.05); }
+[data-ui="pixel"] .bg-apricot\/50 { background: rgba(255,255,255,0.08); }
+[data-ui="pixel"] .bg-blush\/20 { background: rgba(255,107,138,0.15); }
+[data-ui="pixel"] .bg-sunset\/10 { background: rgba(255,204,0,0.08); }
+[data-ui="pixel"] .bg-sunset\/20 { background: rgba(255,204,0,0.14); }
 
-/* Pixel: buttons — GBA style */
+/* Pokemon: text colors */
+[data-ui="pixel"] .text-text-primary { color: #FFFFFF; }
+[data-ui="pixel"] .text-text-secondary { color: rgba(255,255,255,0.55); }
+[data-ui="pixel"] .text-blush { color: #FF6B8A; }
+[data-ui="pixel"] .text-sunset { color: #FFCC00; }
+[data-ui="pixel"] .text-calm { color: #3498DB; }
+[data-ui="pixel"] .text-mint { color: #4CD964; }
+[data-ui="pixel"] .text-red-400 { color: #E74C3C; }
+
+/* Pokemon: title font */
+[data-ui="pixel"] .font-title {
+  color: #FFCC00;
+  font-weight: 800;
+}
+
+/* Pokemon: buttons — modern rounded */
 [data-ui="pixel"] button {
-  font-family: 'Pixelify Sans', 'Press Start 2P', monospace;
-  border-radius: 4px;
-  transition: all 0.125s ease-out;
-  text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  transition: all 0.2s ease-out;
 }
 [data-ui="pixel"] button:focus-visible {
-  outline: 2px solid #f8b050;
+  outline: 2px solid #FFCC00;
   outline-offset: 2px;
 }
 
-/* Pixel: primary button — gold accent */
+/* Pokemon: primary button */
 [data-ui="pixel"] .btn-gradient {
-  background: #f8b050;
-  color: #383850;
-  border: 3px solid #784800;
-  box-shadow: inset 0 0 0 1px #fcd888;
-  border-radius: 4px;
-  text-shadow: none;
+  background: linear-gradient(135deg, #FFCC00, #F0A000);
+  color: #1a3a6b;
+  border: none;
+  border-radius: 24px;
   font-weight: 700;
-  background-image: none;
+  box-shadow: 0 2px 8px rgba(255,204,0,0.3);
+  background-image: linear-gradient(135deg, #FFCC00, #F0A000);
 }
 [data-ui="pixel"] .btn-gradient:hover {
-  background: #fcd888;
-  border-color: #986000;
+  background: linear-gradient(135deg, #FFD940, #FFB800);
+  box-shadow: 0 4px 16px rgba(255,204,0,0.4);
 }
 [data-ui="pixel"] .btn-gradient:active {
-  background: #d09030;
+  background: linear-gradient(135deg, #E0B000, #D09000);
 }
 [data-ui="pixel"] .btn-gradient:disabled {
-  background: #686880;
-  border-color: #484868;
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.3);
   box-shadow: none;
-  color: #9898a8;
 }
 
-/* Pixel: TabBar — dark panel with top border */
+/* Pokemon: TabBar — frosted glass */
 [data-ui="pixel"] .TabBar {
-  background: #484868;
-  border-top: 3px solid #706880;
-  box-shadow: none;
+  background: rgba(13,34,64,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.1);
 }
 [data-ui="pixel"] .TabBar button {
-  border-radius: 0;
-  font-family: 'Pixelify Sans', monospace;
+  border-radius: 24px;
 }
 [data-ui="pixel"] .TabBar button.bg-blush\/20 {
-  background: #8888c8;
-  color: #383850;
-  text-shadow: none;
-}
-[data-ui="pixel"] .TabBar span.text-xs {
-  text-shadow: 1px 1px 0 #383850;
+  background: rgba(255,204,0,0.15);
+  color: #FFCC00;
 }
 
-/* Pixel: text colors */
-[data-ui="pixel"] .text-text-primary { color: #f8f8f8; }
-[data-ui="pixel"] .text-text-secondary { color: #c8c8d8; }
-[data-ui="pixel"] .text-blush { color: #f89890; }
-[data-ui="pixel"] .text-sunset { color: #f8b050; }
-[data-ui="pixel"] .text-calm { color: #48DDAA; }
-[data-ui="pixel"] .text-mint { color: #78c850; }
-[data-ui="pixel"] .text-red-400 { color: #e70808; }
-
-/* Pixel: gold text (coins, titles) */
-[data-ui="pixel"] .text-sunset {
-  color: #f8b050;
-}
-
-/* Pixel: inputs — dark with bright border */
+/* Pokemon: inputs */
 [data-ui="pixel"] input[type="text"],
 [data-ui="pixel"] input[type="number"],
 [data-ui="pixel"] textarea {
-  background: #484868;
-  border: 3px solid #706880;
-  border-radius: 0;
-  color: #f8f8f8;
-  font-family: 'Pixelify Sans', monospace;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  color: #FFFFFF;
 }
 [data-ui="pixel"] input:focus,
 [data-ui="pixel"] textarea:focus {
-  border-color: #f8b050;
-  box-shadow: 0 0 0 2px rgba(248,176,80,0.3);
+  border-color: #FFCC00;
+  box-shadow: 0 0 0 3px rgba(255,204,0,0.15);
   outline: none;
 }
 
-/* Pixel: modals — 9-slice dialog */
+/* Pokemon: modals */
 [data-ui="pixel"] .fixed.inset-0.bg-black\/20 {
   background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 [data-ui="pixel"] .fixed .bg-white.rounded-card,
 [data-ui="pixel"] .fixed .bg-white.rounded-t-card {
-  background: #706880;
-  border: 3px solid #484868;
-  box-shadow: inset 0 0 0 1px #8888c8;
-  border-radius: 0;
-  color: #f8f8f8;
+  background: rgba(30,60,110,0.95);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 20px;
+  color: #FFFFFF;
 }
 
-/* Pixel: rings and badges */
-[data-ui="pixel"] .ring-blush\/20 { --tw-ring-color: rgba(136,136,200,0.3); }
-[data-ui="pixel"] .ring-blush\/40 { --tw-ring-color: rgba(136,136,200,0.5); }
-[data-ui="pixel"] .rounded-full { border-radius: 0; }
+/* Pokemon: rings and badges */
+[data-ui="pixel"] .ring-blush\/20 { --tw-ring-color: rgba(255,107,138,0.3); }
+[data-ui="pixel"] .ring-blush\/40 { --tw-ring-color: rgba(255,107,138,0.5); }
 
-/* Pixel: coin/badge pills */
+/* Pokemon: coin/badge pills */
 [data-ui="pixel"] .bg-white.rounded-full {
-  background: #706880;
-  border: 2px solid #484868;
-  border-radius: 0;
-  box-shadow: inset 0 0 0 1px rgba(136,136,200,0.5);
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
 }
 
-/* Pixel: scrollbar */
+/* Pokemon: scrollbar */
 [data-ui="pixel"] ::-webkit-scrollbar-thumb {
-  background: #8888c8;
-  border-radius: 0;
+  background: rgba(255,255,255,0.2);
+  border-radius: 4px;
 }
 
-/* Pixel: border colors */
-[data-ui="pixel"] .border-apricot\/30 { border-color: #585870; }
-[data-ui="pixel"] .border-blush\/20 { border-color: rgba(136,136,200,0.2); }
-[data-ui="pixel"] .border-blush\/30 { border-color: rgba(136,136,200,0.3); }
+/* Pokemon: border colors */
+[data-ui="pixel"] .border-apricot\/30 { border-color: rgba(255,255,255,0.08); }
+[data-ui="pixel"] .border-blush\/20 { border-color: rgba(255,107,138,0.15); }
+[data-ui="pixel"] .border-blush\/30 { border-color: rgba(255,107,138,0.2); }
 
-/* Pixel: title font — game title */
-[data-ui="pixel"] .font-title {
-  font-family: 'Press Start 2P', 'ZCOOL KuaiLe', monospace;
-  font-size: 0.85em;
-  color: #f8b050;
-  text-shadow: 3px 3px 0 #6b3a00;
-  letter-spacing: 0;
-  line-height: 1.8;
-}
-
-/* Pixel: image grid sharp corners */
+/* Pokemon: image grid */
 [data-ui="pixel"] .grid .rounded-xl,
 [data-ui="pixel"] .grid .rounded-2xl {
-  border-radius: 0;
+  border-radius: 12px;
 }
 
-/* Pixel: floating emoji/icons */
-[data-ui="pixel"] .animate-\[float_3s_ease-in-out_infinite\] {
-  filter: none;
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+/* Pokemon: backgrounds for specific pages */
+[data-ui="pixel"] .min-h-screen.bg-cream {
+  background: linear-gradient(180deg, #1a3a6b 0%, #0d2240 100%);
 }
 
-/* Pixel: coin display */
-[data-ui="pixel"] .text-sunset {
-  color: #f8b050;
-  text-shadow: 2px 2px 0 #6b3a00;
+/* Pokemon: partner card ring */
+[data-ui="pixel"] .ring-blush\/20 {
+  --tw-ring-color: rgba(255,107,138,0.3);
 }
 
 /* ========== Base ========== */

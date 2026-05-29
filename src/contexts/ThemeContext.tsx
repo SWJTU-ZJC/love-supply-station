@@ -14,7 +14,7 @@ export const uiModeLabels: Record<UIMode, string> = {
   default: '经典',
   apple: '苹果风',
   animal: '动森风',
-  pixel: '宝可梦像素',
+  pixel: '宝可梦风',
 };
 
 export const themeColors: Record<Theme, { primary: string; accent: string; blue: string; green: string }> = {

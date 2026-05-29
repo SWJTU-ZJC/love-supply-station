@@ -1,4 +1,4 @@
-const PS_BASE = 'https://play.pokemonshowdown.com/sprites/gen5';
+const PS_BASE = 'https://play.pokemonshowdown.com/sprites/dex';
 const LOCAL_BASE = '/assets/pixel-sprites';
 
 export const SPRITES = {
@@ -21,6 +21,8 @@ export const SPRITES = {
   primeape:  { file: 'primeape.png', cdn: true },
   slowpoke:  { file: 'slowpoke.png', cdn: true },
   vulpix:    { file: 'vulpix.png', cdn: true },
+  mrmime:    { file: 'mrmime.png', cdn: true },
+  mew:       { file: 'mew.png', cdn: true },
   // Local SVGs
   pokeball:  { file: 'pokeball.svg', cdn: false },
   greatball: { file: 'greatball.svg', cdn: false },
