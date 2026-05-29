@@ -62,8 +62,7 @@ export default function MapPage() {
           });
           if (!res.ok) return '';
           const d = await res.json();
-          const parts = (d.display_name || d.name || '').split(',');
-          return parts.slice(0, 3).join(', ');
+          return d.display_name || d.name || '';
         },
         async () => {
           const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
@@ -323,7 +322,7 @@ export default function MapPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
-                  <p className="text-xs text-text-secondary mt-0.5">
+                  <p className="text-xs text-text-secondary mt-0.5" style={{ fontFamily: '\'PingFang SC\', \'Microsoft YaHei\', \'Noto Sans SC\', sans-serif' }}>
                     📍 {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}
                     {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place && place !== '...' ? ` - ${place}` : ''; })()}
                   </p>
