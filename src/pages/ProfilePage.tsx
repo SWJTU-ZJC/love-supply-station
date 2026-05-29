@@ -155,21 +155,21 @@ export default function ProfilePage() {
             <span className="text-text-primary text-sm">界面风格</span>
             <span className="text-text-secondary text-xs ml-auto">{uiModeLabels[uiMode]}</span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             {(Object.keys(uiModeLabels) as UIMode[]).map(m => (
               <button
                 key={m}
                 onClick={() => setUIMode(m)}
-                className={`flex flex-col items-center gap-2 py-3 rounded-xl transition-all
+                className={`flex flex-col items-center gap-1.5 py-2.5 rounded-xl transition-all
                   ${uiMode === m ? 'bg-apricot ring-2 ring-blush/40' : 'hover:bg-apricot/30 text-text-secondary'}`}
               >
-                <span className="text-2xl">
-                  {m === 'default' ? '📐' : '✨'}
+                <span className="text-xl">
+                  {m === 'default' ? '📐' : m === 'apple' ? '✨' : '🏝️'}
                 </span>
                 <div className="text-center">
-                  <p className={`text-sm ${uiMode === m ? 'text-text-primary font-semibold' : ''}`}>{uiModeLabels[m]}</p>
-                  <p className="text-xs text-text-secondary mt-0.5">
-                    {m === 'default' ? '温暖圆润' : '极简轻盈'}
+                  <p className={`text-xs ${uiMode === m ? 'text-text-primary font-semibold' : ''}`}>{uiModeLabels[m]}</p>
+                  <p className="text-xs text-text-secondary/70 mt-0.5 leading-tight">
+                    {m === 'default' ? '温暖圆润' : m === 'apple' ? '极简轻盈' : '手绘质感'}
                   </p>
                 </div>
               </button>
