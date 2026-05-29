@@ -57,7 +57,7 @@ export default function MapPage() {
       // Try multiple free geocoding APIs in order
       const apis = [
         async () => {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`, {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh-CN`, {
             headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
           });
           if (!res.ok) return '';
@@ -65,11 +65,10 @@ export default function MapPage() {
           return d.display_name || d.name || '';
         },
         async () => {
-          const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location=${lng},${lat}&langCode=ZH`);
+          const res = await fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location=${lng},${lat}&langCode=zh-CN`);
           if (!res.ok) return '';
           const d = await res.json();
-          const addr = d.address;
-          return addr ? [addr.District, addr.City, addr.Subregion, addr.Region].filter(Boolean).join('，') : '';
+          return d.address?.LongLabel || d.address?.Match_addr || '';
         },
         async () => {
           const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=zh`);
