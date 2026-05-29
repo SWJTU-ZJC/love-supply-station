@@ -53,12 +53,19 @@ export default function MapPage() {
     if (placeCacheRef.current[key]) return;
     placeCacheRef.current[key] = '...';
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`, {
+        headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
+      });
+      if (!res.ok) { delete placeCacheRef.current[key]; return; }
       const data = await res.json();
-      const name = data.display_name || data.name || '';
-      const shortName = name.split(',')[0] || name;
-      placeCacheRef.current[key] = shortName;
-      setPlaceNames(prev => ({ ...prev, [key]: shortName }));
+      const name = (data as any).display_name || (data as any).name || '';
+      const shortName = name ? name.split(',')[0] : '';
+      if (shortName) {
+        placeCacheRef.current[key] = shortName;
+        setPlaceNames(prev => ({ ...prev, [key]: shortName }));
+      } else {
+        delete placeCacheRef.current[key];
+      }
     } catch {
       delete placeCacheRef.current[key];
     }
