@@ -8,11 +8,13 @@ import DailyPhotoStrip from '../components/DailyPhotoStrip';
 import FeatureGrid from '../components/FeatureGrid';
 import confetti from 'canvas-confetti';
 import { useTheme, themeColors } from '../contexts/ThemeContext';
+import PixelSprite from '../components/PixelSprite';
 
 export default function HomePage() {
   const { user, partner } = useAuth();
   const { state } = useSync();
-  const { theme } = useTheme();
+  const { theme, uiMode } = useTheme();
+  const isPixel = uiMode === 'pixel';
   const tc = themeColors[theme];
   const [showHearts, setShowHearts] = useState(false);
   const navigate = useNavigate();
@@ -98,7 +100,7 @@ export default function HomePage() {
           {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
         </p>
         <div className="flex items-center gap-1.5 bg-white rounded-full px-3 py-1.5 shadow-soft">
-          <span className="text-sm">🪙</span>
+          {isPixel ? <PixelSprite name="meowth" size={18} /> : <span className="text-sm">🪙</span>}
           <span className="font-semibold text-sunset text-sm">{myCoins}</span>
         </div>
       </div>

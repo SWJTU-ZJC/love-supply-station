@@ -1,27 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import AnimalIcon, { type AnimalIconName } from './AnimalIcon';
-
-const pixelBase = '/assets/pixel-sprites';
+import PixelSprite from './PixelSprite';
 
 const tabs = [
-  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName, pixelSprite: 'pikachu' },
-  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName, pixelSprite: 'heart' },
-  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName, pixelSprite: 'map' },
-  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName, pixelSprite: 'eevee' },
+  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName, sprite: 'pikachu' as const },
+  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName, sprite: 'luvdisc' as const },
+  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName, sprite: 'pikachu' as const },
+  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName, sprite: 'eevee' as const },
 ];
-
-function PixelSprite({ name, size = 28 }: { name: string; size?: number }) {
-  return (
-    <img
-      src={`${pixelBase}/${name}.svg`}
-      alt={name}
-      width={size}
-      height={size}
-      style={{ imageRendering: 'pixelated', display: 'block' }}
-    />
-  );
-}
 
 export default function TabBar() {
   const location = useLocation();
@@ -51,9 +38,9 @@ export default function TabBar() {
                          : 'text-text-secondary hover:text-text-primary'
                        }`}
           >
-            <span className={`leading-none ${isAnimal ? 'animal-tab-icon' : isPixel ? 'pixel-tab-icon' : 'text-2xl'}`}>
+            <span className={`leading-none ${isPixel || isAnimal ? '' : 'text-2xl'}`}>
               {isPixel ? (
-                <PixelSprite name={tab.pixelSprite} size={28} />
+                <PixelSprite name={tab.sprite} size={28} />
               ) : isAnimal ? (
                 <AnimalIcon name={tab.animalIcon} size={28} />
               ) : (

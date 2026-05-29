@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import PixelSprite from '../components/PixelSprite';
 import type { Identity } from '../types';
 
 export default function LoginPage() {
@@ -89,7 +90,7 @@ export default function LoginPage() {
             >
               <div className="mb-2 flex justify-center">
                 {isPixel ? (
-                  <img src="/assets/pixel-sprites/buneary.svg" alt="" width={48} height={48} style={{imageRendering:'pixelated'}} />
+                  <PixelSprite name="clefairy" size={48} />
                 ) : (
                   <span className="text-5xl">🐰</span>
                 )}
@@ -106,7 +107,7 @@ export default function LoginPage() {
             >
               <div className="mb-2 flex justify-center">
                 {isPixel ? (
-                  <img src="/assets/pixel-sprites/snorlax.svg" alt="" width={48} height={48} style={{imageRendering:'pixelated'}} />
+                  <PixelSprite name="snorlax" size={48} />
                 ) : (
                   <span className="text-5xl">🐻</span>
                 )}

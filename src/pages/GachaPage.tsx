@@ -5,6 +5,7 @@ import { useSync } from '../contexts/SyncContext';
 import confetti from 'canvas-confetti';
 import { useTheme, themeColors } from '../contexts/ThemeContext';
 import AnimalIcon from '../components/AnimalIcon';
+import PixelSprite from '../components/PixelSprite';
 
 interface GachaItem {
   name: string;
@@ -245,23 +246,21 @@ export default function GachaPage() {
                     {/* Capsules inside dome */}
                     {isPixel ? (
                       /* Poké Balls bouncing in dome */
-                      ['pokeball','greatball','ultraball','pokeball','greatball','pokeball','ultraball','greatball','pokeball','ultraball'].map((ball, i) => {
+                      (['pokeball','greatball','ultraball','pokeball','greatball','pokeball','ultraball','greatball','pokeball','ultraball'] as const).map((ball, i) => {
                         const x = [8,30,55,75,95,110,20,50,80,100];
                         const y = [10,5,15,3,12,6,40,38,42,35];
-                        const s = [14,14,14,14,14,14,14,14,14,14];
+                        const s = 14;
                         return (
                           <div
                             key={i}
                             className={`absolute ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
                             style={{
-                              width: s[i] * 2,
-                              height: s[i] * 2,
                               left: x[i],
                               top: y[i],
                               animationDelay: `${i * 0.15}s, ${i * 0.15}s`,
                             }}
                           >
-                            <img src={`/assets/pixel-sprites/${ball}.svg`} alt="" width={s[i]*2} height={s[i]*2} style={{imageRendering:'pixelated'}} />
+                            <PixelSprite name={ball} size={s * 2} />
                           </div>
                         );
                       })
@@ -301,9 +300,9 @@ export default function GachaPage() {
                   <div className={`w-5 h-3 rounded-b-md mt-[-1px] ${isAnimal ? 'bg-[#3d2810]/30' : 'bg-blush/10'}`}>
                     {spinning && (
                       isPixel ? (
-                        <img src="/assets/pixel-sprites/pokeball.svg" alt="" width={14} height={14}
-                             className="mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
-                             style={{ imageRendering: 'pixelated' }} />
+                        <div className="mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]">
+                          <PixelSprite name="pokeball" size={14} />
+                        </div>
                       ) : (
                         <div className="w-3 h-3 rounded-full mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
                              style={{ background: `radial-gradient(circle at 40% 35%, ${dropColor}cc, ${dropColor})` }} />

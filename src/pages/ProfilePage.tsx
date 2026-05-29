@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTheme, themeLabels, themeColors, uiModeLabels, type Theme, type UIMode } from '../contexts/ThemeContext';
 import AnimalIcon from '../components/AnimalIcon';
+import PixelSprite from '../components/PixelSprite';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
@@ -82,9 +83,9 @@ export default function ProfilePage() {
 
       <div className="grid grid-cols-2 gap-3">
         {([
-          { label: '上传照片', count: photoCount, emoji: '🎬', animalIcon: 'camera' as const, color: '#b77dee' },
-          { label: '打卡地点', count: checkinCount, emoji: '📍', animalIcon: 'map' as const, color: '#82d5bb' },
-          { label: '完成小事', count: doneCount, emoji: '✅', animalIcon: 'diy' as const, color: '#f7cd67' },
+          { label: '上传照片', count: photoCount, emoji: '🎬', animalIcon: 'camera' as const, pixelSprite: 'smeargle' as const, color: '#b77dee' },
+          { label: '打卡地点', count: checkinCount, emoji: '📍', animalIcon: 'map' as const, pixelSprite: 'pikachu' as const, color: '#82d5bb' },
+          { label: '完成小事', count: doneCount, emoji: '✅', animalIcon: 'diy' as const, pixelSprite: 'togepi' as const, color: '#f7cd67' },
         ]).map((stat) => (
           <div
             key={stat.label}
@@ -92,7 +93,9 @@ export default function ProfilePage() {
             style={isAnimal ? { background: stat.color, border: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 0 0 rgba(0,0,0,0.08)' } : {}}
           >
             <div className="mb-1 flex justify-center">
-              {isAnimal ? (
+              {isPixel ? (
+                <PixelSprite name={stat.pixelSprite} size={32} />
+              ) : isAnimal ? (
                 <AnimalIcon name={stat.animalIcon} size={32} />
               ) : (
                 <span className="text-3xl">{stat.emoji}</span>
