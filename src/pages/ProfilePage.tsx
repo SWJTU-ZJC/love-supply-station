@@ -181,7 +181,7 @@ export default function ProfilePage() {
                 <div className="text-center">
                   <p className={`text-xs ${uiMode === m ? 'text-text-primary font-semibold' : ''}`}>{uiModeLabels[m]}</p>
                   <p className="text-xs text-text-secondary/70 mt-0.5 leading-tight">
-                    {m === 'default' ? '温暖圆润' : m === 'apple' ? '极简轻盈' : m === 'animal' ? '手绘质感' : '像素复古'}
+                    {m === 'default' ? '温暖圆润' : m === 'apple' ? '极简轻盈' : m === 'animal' ? '手绘质感' : '宝可梦HOME'}
                   </p>
                 </div>
               </button>
