@@ -8,7 +8,15 @@ import DailyPhotoStrip from '../components/DailyPhotoStrip';
 import FeatureGrid from '../components/FeatureGrid';
 import confetti from 'canvas-confetti';
 import { useTheme, themeColors } from '../contexts/ThemeContext';
-import PixelSprite, { getAvatarSprite } from '../components/PixelSprite';
+import PixelSprite, { getAvatarSprite, type SPRITES } from '../components/PixelSprite';
+
+const moodSpriteMap: Record<string, keyof typeof SPRITES> = {
+  '😊': 'psyduck',
+  '🥺': 'cubone',
+  '😤': 'primeape',
+  '😴': 'slowpoke',
+  '🥰': 'vulpix',
+};
 
 export default function HomePage() {
   const { user, partner } = useAuth();
@@ -120,7 +128,7 @@ export default function HomePage() {
                           ring-4 ring-blush/20">
               {isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={64} /> : <span className="text-3xl">{partner.avatar}</span>}
             </div>
-            <div className="absolute -bottom-1 -right-1">{isPixel ? <PixelSprite name={getAvatarSprite(partner.avatar)} size={56} /> : <span className="text-xl">{partnerMood}</span>}</div>
+            <div className="absolute -bottom-1 -right-1">{isPixel ? <PixelSprite name={moodSpriteMap[partnerMood] || 'pikachu'} size={48} /> : <span className="text-xl">{partnerMood}</span>}</div>
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-lg text-text-primary">{partner.nickname}</h3>
