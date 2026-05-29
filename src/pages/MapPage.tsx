@@ -62,20 +62,21 @@ export default function MapPage() {
           });
           if (!res.ok) return '';
           const d = await res.json();
-          return (d.display_name || d.name || '').split(',')[0];
+          const parts = (d.display_name || d.name || '').split(',');
+          return parts.slice(0, 3).join(', ');
         },
         async () => {
           const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
           if (!res.ok) return '';
           const d = await res.json();
-          return d.locality || d.city || d.principalSubdivision || '';
+          return [d.locality, d.city, d.principalSubdivision].filter(Boolean).join(', ');
         },
         async () => {
           const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1`);
           if (!res.ok) return '';
           const d = await res.json();
           const f = d.features?.[0]?.properties;
-          return f ? (f.name || f.city || f.state || '') : '';
+          return f ? [f.name, f.city, f.state].filter(Boolean).join(', ') : '';
         },
       ];
       for (const fn of apis) {
