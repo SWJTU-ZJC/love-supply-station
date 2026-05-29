@@ -55,12 +55,12 @@ export default function MapPage() {
     try {
       let name = '';
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh-CN`, {
-          headers: { 'User-Agent': 'LoveSupplyApp/1.0' },
-        });
+        const res = await fetch(`https://restapi.amap.com/v3/geocode/regeo?key=a7beac025cbc7c2c55d5517c82d03b44&location=${lng},${lat}&radius=1000&extensions=base&output=json`);
         if (res.ok) {
           const d = await res.json();
-          name = d.display_name || '';
+          if (d.status === '1' && d.regeocode) {
+            name = d.regeocode.formatted_address || '';
+          }
         }
       } catch {}
       if (name) {
