@@ -1,0 +1,23 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" fill="transparent" shape-rendering="crispEdges"/>
+  <!-- Body -->
+  <rect x="10" y="14" width="12" height="12" fill="#D8A878" shape-rendering="crispEdges"/>
+  <rect x="12" y="12" width="8" height="4" fill="#F8E8C0" shape-rendering="crispEdges"/>
+  <!-- Head -->
+  <rect x="10" y="6" width="12" height="8" fill="#D8A878" shape-rendering="crispEdges"/>
+  <!-- Ears (long floppy) -->
+  <rect x="6" y="0" width="4" height="10" fill="#D8A878" shape-rendering="crispEdges"/>
+  <rect x="6" y="2" width="2" height="8" fill="#F8D8C0" shape-rendering="crispEdges"/>
+  <rect x="22" y="0" width="4" height="10" fill="#D8A878" shape-rendering="crispEdges"/>
+  <rect x="24" y="2" width="2" height="8" fill="#F8D8C0" shape-rendering="crispEdges"/>
+  <!-- Face -->
+  <rect x="12" y="8" width="3" height="3" fill="#383850" shape-rendering="crispEdges"/>
+  <rect x="17" y="8" width="3" height="3" fill="#383850" shape-rendering="crispEdges"/>
+  <rect x="14" y="12" width="4" height="2" fill="#F89890" shape-rendering="crispEdges"/>
+  <!-- Cute pink cheeks -->
+  <rect x="8" y="10" width="2" height="2" fill="#F89890" shape-rendering="crispEdges"/>
+  <rect x="22" y="10" width="2" height="2" fill="#F89890" shape-rendering="crispEdges"/>
+  <!-- Feet -->
+  <rect x="12" y="26" width="3" height="4" fill="#D8A878" shape-rendering="crispEdges"/>
+  <rect x="17" y="26" width="3" height="4" fill="#D8A878" shape-rendering="crispEdges"/>
+</svg>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import type { Identity } from '../types';
 
 export default function LoginPage() {
@@ -8,6 +9,8 @@ export default function LoginPage() {
   const [step, setStep] = useState<'code' | 'identity'>('code');
   const [error, setError] = useState('');
   const { login, isLoggedIn } = useAuth();
+  const { uiMode } = useTheme();
+  const isPixel = uiMode === 'pixel';
   const navigate = useNavigate();
 
   if (isLoggedIn) {
@@ -84,7 +87,13 @@ export default function LoginPage() {
                        hover:border-blush hover:shadow-soft-lg hover:-translate-y-1
                        active:scale-[0.98] transition-all duration-300 group"
             >
-              <div className="text-5xl mb-2">🐰</div>
+              <div className="mb-2 flex justify-center">
+                {isPixel ? (
+                  <img src="/assets/pixel-sprites/buneary.svg" alt="" width={48} height={48} style={{imageRendering:'pixelated'}} />
+                ) : (
+                  <span className="text-5xl">🐰</span>
+                )}
+              </div>
               <div className="font-semibold text-lg text-text-primary">小可爱</div>
               <div className="text-text-secondary text-sm">（她 / 女朋友）</div>
             </button>
@@ -95,7 +104,13 @@ export default function LoginPage() {
                        hover:border-calm hover:shadow-soft-lg hover:-translate-y-1
                        active:scale-[0.98] transition-all duration-300 group"
             >
-              <div className="text-5xl mb-2">🐻</div>
+              <div className="mb-2 flex justify-center">
+                {isPixel ? (
+                  <img src="/assets/pixel-sprites/snorlax.svg" alt="" width={48} height={48} style={{imageRendering:'pixelated'}} />
+                ) : (
+                  <span className="text-5xl">🐻</span>
+                )}
+              </div>
               <div className="font-semibold text-lg text-text-primary">大笨蛋</div>
               <div className="text-text-secondary text-sm">（他 / 男朋友）</div>
             </button>

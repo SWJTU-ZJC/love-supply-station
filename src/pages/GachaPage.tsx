@@ -56,6 +56,7 @@ export default function GachaPage() {
   const tc = themeColors[theme];
   const rarityConfig = getRarityConfig(tc);
   const isAnimal = uiMode === 'animal';
+  const isPixel = uiMode === 'pixel';
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<GachaItem | null>(null);
   const [scratched, setScratched] = useState(false);
@@ -71,7 +72,9 @@ export default function GachaPage() {
 
   const handleSpin = () => {
     if (spinning || myCoins < cost) return;
-    const colors = isAnimal
+    const colors = isPixel
+      ? ['#E02020', '#4888F0', '#F8D030', '#78C850', '#F89890', '#b77dee']
+      : isAnimal
       ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266']
       : [tc.primary, tc.accent, tc.blue, tc.green];
     setDropColor(colors[Math.floor(Math.random() * colors.length)]);
@@ -240,29 +243,53 @@ export default function GachaPage() {
                   <div className={`relative w-36 h-28 overflow-hidden rounded-t-full border-[3px] ${isAnimal ? 'border-white/50 bg-white/15' : 'border-blush/30 bg-blush/5'}`}
                        style={{ borderBottom: 'none' }}>
                     {/* Capsules inside dome */}
-                    {(isAnimal
-                      ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266','#f8a6b2','#f7cd67','#b77dee','#82d5bb']
-                      : [tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent]
-                    ).map((color, i) => {
-                      const x = [8,30,55,75,95,110,20,50,80,100];
-                      const y = [10,5,15,3,12,6,40,38,42,35];
-                      const s = [12,14,11,13,10,14,12,13,11,12];
-                      return (
-                        <div
-                          key={i}
-                          className={`absolute rounded-full border-2 ${isAnimal ? 'border-white/60' : 'border-white/70'} ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
-                          style={{
-                            background: `radial-gradient(circle at 40% 35%, ${color}cc, ${color})`,
-                            width: s[i] * 2,
-                            height: s[i] * 2,
-                            left: x[i],
-                            top: y[i],
-                            animationDelay: `${i * 0.15}s, ${i * 0.15}s`,
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                          }}
-                        />
-                      );
-                    })}
+                    {isPixel ? (
+                      /* Poké Balls bouncing in dome */
+                      ['pokeball','greatball','ultraball','pokeball','greatball','pokeball','ultraball','greatball','pokeball','ultraball'].map((ball, i) => {
+                        const x = [8,30,55,75,95,110,20,50,80,100];
+                        const y = [10,5,15,3,12,6,40,38,42,35];
+                        const s = [14,14,14,14,14,14,14,14,14,14];
+                        return (
+                          <div
+                            key={i}
+                            className={`absolute ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
+                            style={{
+                              width: s[i] * 2,
+                              height: s[i] * 2,
+                              left: x[i],
+                              top: y[i],
+                              animationDelay: `${i * 0.15}s, ${i * 0.15}s`,
+                            }}
+                          >
+                            <img src={`/assets/pixel-sprites/${ball}.svg`} alt="" width={s[i]*2} height={s[i]*2} style={{imageRendering:'pixelated'}} />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      (isAnimal
+                        ? ['#f8a6b2','#82d5bb','#f7cd67','#b77dee','#889df0','#e59266','#f8a6b2','#f7cd67','#b77dee','#82d5bb']
+                        : [tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent, tc.blue, tc.green, tc.primary, tc.accent]
+                      ).map((color, i) => {
+                        const x = [8,30,55,75,95,110,20,50,80,100];
+                        const y = [10,5,15,3,12,6,40,38,42,35];
+                        const s = [12,14,11,13,10,14,12,13,11,12];
+                        return (
+                          <div
+                            key={i}
+                            className={`absolute rounded-full border-2 ${isAnimal ? 'border-white/60' : 'border-white/70'} ${spinning ? 'animate-[shake_0.08s_ease-in-out_infinite]' : 'animate-[float_3s_ease-in-out_infinite]'}`}
+                            style={{
+                              background: `radial-gradient(circle at 40% 35%, ${color}cc, ${color})`,
+                              width: s[i] * 2,
+                              height: s[i] * 2,
+                              left: x[i],
+                              top: y[i],
+                              animationDelay: `${i * 0.15}s, ${i * 0.15}s`,
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                            }}
+                          />
+                        );
+                      })
+                    )}
                     {/* Glass reflection */}
                     <div className="absolute top-2 left-3 w-10 h-6 rounded-full bg-white/25 rotate-[-15deg]" />
                   </div>
@@ -273,8 +300,14 @@ export default function GachaPage() {
                   {/* Chute with random-color dropping capsule */}
                   <div className={`w-5 h-3 rounded-b-md mt-[-1px] ${isAnimal ? 'bg-[#3d2810]/30' : 'bg-blush/10'}`}>
                     {spinning && (
-                      <div className="w-3 h-3 rounded-full mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
-                           style={{ background: `radial-gradient(circle at 40% 35%, ${dropColor}cc, ${dropColor})` }} />
+                      isPixel ? (
+                        <img src="/assets/pixel-sprites/pokeball.svg" alt="" width={14} height={14}
+                             className="mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
+                             style={{ imageRendering: 'pixelated' }} />
+                      ) : (
+                        <div className="w-3 h-3 rounded-full mx-auto mt-1 animate-[gachaDrop_0.8s_ease-in_infinite]"
+                             style={{ background: `radial-gradient(circle at 40% 35%, ${dropColor}cc, ${dropColor})` }} />
+                      )
                     )}
                   </div>
                 </div>
