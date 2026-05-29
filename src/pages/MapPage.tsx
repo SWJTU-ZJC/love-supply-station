@@ -26,7 +26,7 @@ function compressToDataUrl(file: File, maxW: number = 800, quality: number = 0.7
 
 export default function MapPage() {
   const { user, partner } = useAuth();
-  const { state, addCheckin, deleteCheckin, updateCoins } = useSync();
+  const { state, addCheckin, deleteCheckin, updateCoins, updatePartnerLocation } = useSync();
   const { theme, uiMode } = useTheme();
   const tc = themeColors[theme];
   const isPixel = uiMode === 'pixel';
@@ -44,6 +44,7 @@ export default function MapPage() {
   const [gpsErr, setGpsErr] = useState('');
   const markersRef = useRef<L.Marker[]>([]);
   const locationMarkerRef = useRef<L.Marker | null>(null);
+  const partnerMarkerRef = useRef<L.Marker | null>(null);
   const [placeNames, setPlaceNames] = useState<Record<string, string>>({});
   const placeCacheRef = useRef<Record<string, string>>({});
 
@@ -146,7 +147,47 @@ export default function MapPage() {
     getPos();
   }, [getPos]);
 
+  // Upload GPS position every 30 seconds
   useEffect(() => {
+    if (!gpsPos) return;
+    updatePartnerLocation(gpsPos.lat, gpsPos.lng);
+    const timer = setInterval(() => {
+      if (gpsPos) updatePartnerLocation(gpsPos.lat, gpsPos.lng);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [gpsPos, updatePartnerLocation]);
+
+  // Display partner's location on map
+  const partnerLocation = (state.partnerLocations || []).find(l => l.userId !== user?.id);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !partnerLocation || !partner || viewMode !== 'map') {
+      if (partnerMarkerRef.current) { partnerMarkerRef.current.remove(); partnerMarkerRef.current = null; }
+      return;
+    }
+    const partnerAvatar = isPixel
+      ? spriteUrl(getAvatarSprite(partner.avatar))
+      : '';
+    const icon = L.divIcon({
+      html: `<div style="
+        width:40px;height:40px;border-radius:50%;
+        background:#FF6B8A;
+        display:flex;align-items:center;justify-content:center;
+        font-size:20px;
+        border:3px solid white;
+        box-shadow:0 0 12px rgba(255,107,138,0.5);
+      ">${isPixel ? `<img src='${partnerAvatar}' width=32 height=32 style='image-rendering:pixelated;display:block'>` : (partner.avatar || '💕')}</div>`,
+      className: 'partner-marker',
+      iconSize: [40, 40],
+      iconAnchor: [20, 20],
+    });
+    if (partnerMarkerRef.current) {
+      partnerMarkerRef.current.setLatLng([partnerLocation.lat, partnerLocation.lng]);
+    } else {
+      partnerMarkerRef.current = L.marker([partnerLocation.lat, partnerLocation.lng], { icon, zIndexOffset: 2000 }).addTo(map);
+      partnerMarkerRef.current.bindPopup(`<b>${partner.nickname}</b><br/>${new Date(partnerLocation.updatedAt).toLocaleTimeString('zh-CN')}`);
+    }
+  }, [partnerLocation, partner, viewMode, mapRef.current, isPixel, user]);
     if (viewMode !== 'map' || !mapContainerRef.current) return;
 
     if (mapRef.current) {
@@ -344,10 +385,7 @@ export default function MapPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
-                  <p className="text-xs text-text-secondary mt-0.5" style={{ fontFamily: '\'PingFang SC\', \'Microsoft YaHei\', \'Noto Sans SC\', sans-serif' }}>
-                    📍 {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}
-                    {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place && place !== '...' ? ` - ${place}` : ''; })()}
-                  </p>
+                  {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place && place !== '...' ? <p className="text-xs text-text-secondary mt-0.5" style={{ fontFamily: '\'PingFang SC\', \'Microsoft YaHei\', \'Noto Sans SC\', sans-serif' }}>📍 {place}</p> : null; })()}
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-text-secondary">{c.createdAt}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded-full"

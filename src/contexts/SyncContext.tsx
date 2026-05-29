@@ -31,6 +31,7 @@ export interface SharedAnniversary {
   createdAt: number;
 }
 
+export interface PartnerLocation { userId: string; lat: number; lng: number; updatedAt: number; }
 export interface SharedState {
   version: number;
   moods: SharedMood[];
@@ -42,6 +43,7 @@ export interface SharedState {
   anniversaries: SharedAnniversary[];
   deletedPhotoIds: string[];
   deletedCheckinIds: string[];
+  partnerLocations: PartnerLocation[];
 }
 
 interface SyncContextType {
@@ -63,6 +65,7 @@ interface SyncContextType {
   addAnniversary: (a: Omit<SharedAnniversary, 'id' | 'createdAt'>) => void;
   updateAnniversary: (id: string, updates: Partial<Pick<SharedAnniversary, 'title' | 'date' | 'type' | 'year'>>) => void;
   deleteAnniversary: (id: string) => void;
+  updatePartnerLocation: (lat: number, lng: number) => void;
 }
 
 const SyncContext = createContext<SyncContextType | null>(null);
@@ -250,7 +253,7 @@ function getEmptyState(): SharedState {
     version: 1,
     moods: [], coins: [], checkins: [], photos: [],
     littleThings: [], gachaItems: [], anniversaries: [],
-    deletedPhotoIds: [], deletedCheckinIds: [],
+    deletedPhotoIds: [], deletedCheckinIds: [], partnerLocations: [],
   };
 }
 
@@ -313,6 +316,7 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     littleThings: mergeById(local.littleThings, remote.littleThings),
     gachaItems: mergeById(local.gachaItems, remote.gachaItems),
     anniversaries: mergeById(local.anniversaries, remote.anniversaries),
+    partnerLocations: mergeByUserIdLatest(local.partnerLocations, remote.partnerLocations, x => x.updatedAt),
     deletedPhotoIds: [...deletedPhotos],
     deletedCheckinIds: [...deletedCheckins],
   };
@@ -765,6 +769,17 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     }));
   }, [updateLocal]);
 
+  const updatePartnerLocation = useCallback((lat: number, lng: number) => {
+    if (!user) return;
+    updateLocal(prev => ({
+      ...prev,
+      partnerLocations: [
+        ...prev.partnerLocations.filter(l => l.userId !== user.id),
+        { userId: user.id, lat, lng, updatedAt: Date.now() },
+      ],
+    }));
+  }, [user, updateLocal]);
+
   return (
     <SyncContext.Provider value={{
       state, connected, syncing, lastSync,
@@ -772,6 +787,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       toggleLittleThing, addLittleThing,
       addGachaItem, useGachaItem,
       addAnniversary, updateAnniversary, deleteAnniversary,
+      updatePartnerLocation,
     }}>
       {children}
     </SyncContext.Provider>
