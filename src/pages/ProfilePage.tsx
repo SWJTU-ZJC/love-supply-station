@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const { theme, setTheme, uiMode, setUIMode } = useTheme();
   const tc = themeColors[theme];
   const isAnimal = uiMode === 'animal';
+  const isPixel = uiMode === 'pixel';
 
   if (!user || !partner) return null;
 
