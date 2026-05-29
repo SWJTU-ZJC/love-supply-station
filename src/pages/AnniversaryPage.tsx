@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useSync, type SharedAnniversary } from '../contexts/SyncContext';
+import { useTheme } from '../contexts/ThemeContext';
+import AnimalIcon, { type AnimalIconName } from '../components/AnimalIcon';
 
 function getNextOccurrence(mmdd: string): Date {
   const now = new Date();
@@ -42,7 +44,15 @@ const typeEmojis: Record<string, string> = {
   memory: '💫',
 };
 
+const typeIcons: Record<string, AnimalIconName> = {
+  anniversary: 'heart',
+  birthday: 'gift',
+  memory: 'star',
+};
+
 export default function AnniversaryPage() {
+  const { uiMode } = useTheme();
+  const isAnimal = uiMode === 'animal';
   const { state, addAnniversary, updateAnniversary, deleteAnniversary } = useSync();
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -126,7 +136,13 @@ export default function AnniversaryPage() {
               key={item.id}
               className="bg-white rounded-card p-4 shadow-soft flex items-center gap-3 group"
             >
-              <span className="text-2xl">{typeEmojis[item.type]}</span>
+              <span className="text-2xl">
+                {isAnimal ? (
+                  <AnimalIcon name={typeIcons[item.type]} size={28} />
+                ) : (
+                  typeEmojis[item.type]
+                )}
+              </span>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text-primary text-sm">{item.title}</p>
                 <p className="text-text-secondary text-xs">
@@ -216,7 +232,7 @@ export default function AnniversaryPage() {
                       : 'bg-apricot/50 text-text-secondary hover:bg-apricot'
                   }`}
                 >
-                  {typeEmojis[t]} {label}
+                  {isAnimal ? <AnimalIcon name={typeIcons[t]} size={18} /> : typeEmojis[t]} {label}
                 </button>
               ))}
             </div>

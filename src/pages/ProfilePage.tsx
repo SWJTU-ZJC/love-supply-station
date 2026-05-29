@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 import { useTheme, themeLabels, themeColors, uiModeLabels, type Theme, type UIMode } from '../contexts/ThemeContext';
+import AnimalIcon from '../components/AnimalIcon';
 import confetti from 'canvas-confetti';
 
 export default function ProfilePage() {
@@ -11,6 +12,7 @@ export default function ProfilePage() {
   const { state, connected, lastSync, updateCoins } = useSync();
   const { theme, setTheme, uiMode, setUIMode } = useTheme();
   const tc = themeColors[theme];
+  const isAnimal = uiMode === 'animal';
 
   if (!user || !partner) return null;
 
@@ -79,21 +81,27 @@ export default function ProfilePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-card p-4 shadow-soft text-center">
-          <div className="text-3xl mb-1">🎬</div>
-          <p className="text-xl font-bold text-blush">{photoCount}</p>
-          <p className="text-text-secondary text-xs">上传照片</p>
-        </div>
-        <div className="bg-white rounded-card p-4 shadow-soft text-center">
-          <div className="text-3xl mb-1">📍</div>
-          <p className="text-xl font-bold text-calm">{checkinCount}</p>
-          <p className="text-text-secondary text-xs">打卡地点</p>
-        </div>
-        <div className="bg-white rounded-card p-4 shadow-soft text-center">
-          <div className="text-3xl mb-1">✅</div>
-          <p className="text-xl font-bold text-mint">{doneCount}</p>
-          <p className="text-text-secondary text-xs">完成小事</p>
-        </div>
+        {([
+          { label: '上传照片', count: photoCount, emoji: '🎬', animalIcon: 'camera' as const, color: '#b77dee' },
+          { label: '打卡地点', count: checkinCount, emoji: '📍', animalIcon: 'map' as const, color: '#82d5bb' },
+          { label: '完成小事', count: doneCount, emoji: '✅', animalIcon: 'diy' as const, color: '#f7cd67' },
+        ]).map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-card p-4 shadow-soft text-center"
+            style={isAnimal ? { background: stat.color, border: '2px solid rgba(255,255,255,0.4)', boxShadow: '0 4px 0 0 rgba(0,0,0,0.08)' } : {}}
+          >
+            <div className="mb-1 flex justify-center">
+              {isAnimal ? (
+                <AnimalIcon name={stat.animalIcon} size={32} />
+              ) : (
+                <span className="text-3xl">{stat.emoji}</span>
+              )}
+            </div>
+            <p className={`text-xl font-bold ${isAnimal ? 'text-white' : 'text-blush'}`}>{stat.count}</p>
+            <p className={`text-xs ${isAnimal ? 'text-white/75' : 'text-text-secondary'}`}>{stat.label}</p>
+          </div>
+        ))}
       </div>
 
       <div className="bg-white rounded-card p-5 shadow-soft">

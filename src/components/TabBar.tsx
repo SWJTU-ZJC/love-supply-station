@@ -1,15 +1,19 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
+import AnimalIcon, { type AnimalIconName } from './AnimalIcon';
 
 const tabs = [
-  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒' },
-  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝' },
-  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️' },
-  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️' },
+  { path: '/home', label: '首页', icon: '🏠', activeIcon: '💒', animalIcon: 'miles' as AnimalIconName },
+  { path: '/anniversary', label: '纪念日', icon: '💕', activeIcon: '💝', animalIcon: 'diy' as AnimalIconName },
+  { path: '/map', label: '打卡', icon: '📍', activeIcon: '🗺️', animalIcon: 'map' as AnimalIconName },
+  { path: '/profile', label: '我的', icon: '👤', activeIcon: '❤️', animalIcon: 'design' as AnimalIconName },
 ];
 
 export default function TabBar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { uiMode } = useTheme();
+  const isAnimal = uiMode === 'animal';
 
   const currentPath = '/' + location.pathname.split('/')[1];
 
@@ -32,8 +36,12 @@ export default function TabBar() {
                          : 'text-text-secondary hover:text-text-primary'
                        }`}
           >
-            <span className="text-2xl leading-none">
-              {isActive ? tab.activeIcon : tab.icon}
+            <span className={`leading-none ${isAnimal ? 'animal-tab-icon' : 'text-2xl'}`}>
+              {isAnimal ? (
+                <AnimalIcon name={tab.animalIcon} size={28} />
+              ) : (
+                isActive ? tab.activeIcon : tab.icon
+              )}
             </span>
             <span className={`text-xs font-semibold ${isActive ? 'opacity-100' : 'opacity-60'}`}>
               {tab.label}
