@@ -44,6 +44,27 @@ export default function MapPage() {
   const [gpsErr, setGpsErr] = useState('');
   const markersRef = useRef<L.Marker[]>([]);
   const locationMarkerRef = useRef<L.Marker | null>(null);
+  const [placeNames, setPlaceNames] = useState<Record<string, string>>({});
+
+  // Reverse geocode: get place name from coords
+  const fetchPlaceName = async (lat: number, lng: number) => {
+    const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+    if (placeNames[key]) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=zh`);
+      const data = await res.json();
+      const name = data.display_name || data.name || '';
+      setPlaceNames(prev => ({ ...prev, [key]: name.split(',')[0] || name }));
+    } catch {}
+  };
+
+  // Look up place names for existing checkins
+  useEffect(() => {
+    const checkins = state.checkins || [];
+    for (const c of checkins) {
+      fetchPlaceName(c.latitude, c.longitude);
+    }
+  }, [state.checkins]);
 
   const checkins = state.checkins || [];
   const myCoins = state.coins.find(c => c.userId === user?.id)?.coins ?? 5;
@@ -137,18 +158,19 @@ export default function MapPage() {
     const spriteName = getAvatarSprite(avatarEmoji);
     const spriteSrc = spriteUrl(spriteName);
     const emoji = isMine ? user?.avatar || '🐰' : partner?.avatar || '🐻';
+    const spriteImg = `<img src='${spriteSrc}' width=40 height=40 style='image-rendering:pixelated;display:block'>`;
     const icon = L.divIcon({
       html: `<div style="
-        width:40px;height:40px;border-radius:50%;
+        width:44px;height:44px;border-radius:50%;
         background:${isMine ? 'var(--color-primary)' : 'var(--color-blue)'};
         display:flex;align-items:center;justify-content:center;
         font-size:22px;
         border:3px solid white;
         box-shadow:0 4px 16px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
-      ">${isPixel ? `<img src=\\"${spriteSrc}\\" width=28 height=28 style=\\"image-rendering:pixelated\\">` : emoji}</div>`,
+      ">${isPixel ? spriteImg : emoji}</div>`,
       className: 'checkin-marker',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
     });
     const marker = L.marker([checkin.latitude, checkin.longitude], { icon }).addTo(map);
     marker.bindPopup(`
@@ -265,6 +287,7 @@ export default function MapPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-text-primary text-sm leading-relaxed">{c.note}</p>
+                  {(() => { const key = `${c.latitude.toFixed(4)},${c.longitude.toFixed(4)}`; const place = placeNames[key]; return place ? <p className="text-xs text-text-secondary mt-0.5">📍 {place}</p> : null; })()}
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-text-secondary">{c.createdAt}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded-full"

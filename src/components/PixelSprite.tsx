@@ -23,6 +23,7 @@ export const SPRITES = {
   vulpix:    { file: 'vulpix.png', cdn: true },
   mrmime:    { file: 'mrmime.png', cdn: true },
   mew:       { file: 'mew.png', cdn: true },
+  lapras:    { file: 'lapras.png', cdn: true },
   // Local SVGs
   pokeball:  { file: 'pokeball.svg', cdn: false },
   greatball: { file: 'greatball.svg', cdn: false },

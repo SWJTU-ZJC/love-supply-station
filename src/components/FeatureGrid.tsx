@@ -45,7 +45,7 @@ export default function FeatureGrid() {
   return (
     <div>
       <h3 className="font-semibold text-text-primary mb-3 flex items-center gap-2">
-        {isPixel ? <PixelSprite name="pikachu" size={28} /> : isAnimal ? <AnimalIcon name="variant" size={24} /> : <span>🎮</span>}
+        {isPixel ? <PixelSprite name="lapras" size={40} /> : isAnimal ? <AnimalIcon name="variant" size={24} /> : <span>🎮</span>}
         恋爱补给
       </h3>
       <div className="grid grid-cols-2 gap-3">
@@ -65,7 +65,7 @@ export default function FeatureGrid() {
           >
             <div className="relative z-10">
               {isPixel ? (
-                <PixelSprite name={feature.pixelSprite} size={56} className="mb-2" />
+                <PixelSprite name={feature.pixelSprite} size={72} className="mb-2" />
               ) : isAnimal ? (
                 <AnimalIcon name={feature.animalIcon} size={36} className="mb-2" />
               ) : (
