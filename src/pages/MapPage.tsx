@@ -68,14 +68,14 @@ export default function MapPage() {
           const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=zh`);
           if (!res.ok) return '';
           const d = await res.json();
-          return [d.locality, d.city, d.principalSubdivision].filter(Boolean).join(', ');
+          return [d.locality, d.city, d.principalSubdivision, d.countryName].filter(Boolean).join('，');
         },
         async () => {
-          const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1`);
+          const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1&lang=zh`);
           if (!res.ok) return '';
           const d = await res.json();
           const f = d.features?.[0]?.properties;
-          return f ? [f.name, f.city, f.state].filter(Boolean).join(', ') : '';
+          return f ? [f.name, f.street, f.city, f.state, f.country].filter(Boolean).join('，') : '';
         },
       ];
       for (const fn of apis) {
