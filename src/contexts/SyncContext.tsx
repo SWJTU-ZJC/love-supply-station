@@ -301,7 +301,14 @@ function mergeStates(local: SharedState, remote: SharedState): SharedState {
     version: Math.max(local.version, remote.version),
     moods: mergeByUserIdLatest(local.moods, remote.moods, x => x.updatedAt),
     coins: mergeCoins(local.coins, remote.coins),
-    checkins: mergeById(local.checkins, remote.checkins).filter(c => !deletedCheckins.has(c.id)),
+    checkins: mergeById(local.checkins, remote.checkins).map((c: any) => {
+      // Preserve local imageUrl if remote stripped it (IndexedDB photos)
+      const localC = local.checkins.find((lc: any) => lc.id === c.id);
+      if (localC && localC.imageUrl && !c.imageUrl) {
+        return { ...c, imageUrl: localC.imageUrl };
+      }
+      return c;
+    }).filter((c: SharedCheckin) => !deletedCheckins.has(c.id)),
     photos: mergeById(local.photos, remote.photos).filter(p => !deletedPhotos.has(p.id)),
     littleThings: mergeById(local.littleThings, remote.littleThings),
     gachaItems: mergeById(local.gachaItems, remote.gachaItems),

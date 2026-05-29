@@ -146,7 +146,7 @@ export default function AnniversaryPage() {
             >
               <span className="text-2xl">
                 {isPixel ? (
-                  <PixelSprite name={typePixelSprites[item.type]} size={44} />
+                  <PixelSprite name={typePixelSprites[item.type]} size={52} />
                 ) : isAnimal ? (
                   <AnimalIcon name={typeIcons[item.type]} size={28} />
                 ) : (
@@ -242,7 +242,7 @@ export default function AnniversaryPage() {
                       : 'bg-apricot/50 text-text-secondary hover:bg-apricot'
                   }`}
                 >
-                  {isPixel ? <PixelSprite name={typePixelSprites[t]} size={28} /> : isAnimal ? <AnimalIcon name={typeIcons[t]} size={18} /> : typeEmojis[t]} {label}
+                  {isPixel ? <PixelSprite name={typePixelSprites[t]} size={36} /> : isAnimal ? <AnimalIcon name={typeIcons[t]} size={18} /> : typeEmojis[t]} {label}
                 </button>
               ))}
             </div>
