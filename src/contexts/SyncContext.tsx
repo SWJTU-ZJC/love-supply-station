@@ -772,43 +772,14 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
   const updatePartnerLocation = useCallback((lat: number, lng: number) => {
     if (!user) return;
-    setState(prev => {
-      const next = {
-        ...prev,
-        version: prev.version + 1,
-        partnerLocations: [
-          ...prev.partnerLocations.filter(l => l.userId !== user.id),
-          { userId: user.id, lat, lng, updatedAt: Date.now() },
-        ],
-      };
-      saveLocal(next);
-      return next;
-    });
-    // Force immediate push for real-time location (separate timer)
-    if (locPushTimerRef.current) clearTimeout(locPushTimerRef.current);
-    locPushTimerRef.current = setTimeout(async () => {
-      setSyncing(true);
-      const current = stateRef.current;
-      const etag = etagRef.current || '';
-      let newEtag = await pushRemote(current, etag);
-      if (!newEtag && etag) {
-        const result = await fetchRemote();
-        if (result && typeof result === 'object') {
-          etagRef.current = result.etag;
-          const merged = mergeStates(current, result.state);
-          merged.version = Math.max(current.version, result.state.version) + 1;
-          newEtag = await pushRemote(merged, result.etag);
-          if (newEtag) { setState(merged); saveLocal(merged); }
-        }
-      }
-      if (newEtag) {
-        etagRef.current = newEtag;
-        const now = new Date();
-        setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-      }
-      setSyncing(false);
-    }, 500);
-  }, [user, pushRemote, fetchRemote]);
+    updateLocal(prev => ({
+      ...prev,
+      partnerLocations: [
+        ...prev.partnerLocations.filter(l => l.userId !== user.id),
+        { userId: user.id, lat, lng, updatedAt: Date.now() },
+      ],
+    }));
+  }, [user, updateLocal]);
 
   return (
     <SyncContext.Provider value={{
