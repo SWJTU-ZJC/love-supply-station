@@ -346,6 +346,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const etagRef = useRef<string | null>(null);
   const getUrlRef = useRef<CachedUrl | null>(null);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const locPushTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pollTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const dirtyRef = useRef(false);
   const pushingRef = useRef(false);
@@ -783,13 +784,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       saveLocal(next);
       return next;
     });
-    // Force immediate push for real-time location
-    dirtyRef.current = true;
-    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
-    pushTimerRef.current = setTimeout(async () => {
-      if (!dirtyRef.current || pushingRef.current) return;
-      dirtyRef.current = false;
-      pushingRef.current = true;
+    // Force immediate push for real-time location (separate timer)
+    if (locPushTimerRef.current) clearTimeout(locPushTimerRef.current);
+    locPushTimerRef.current = setTimeout(async () => {
       setSyncing(true);
       const current = stateRef.current;
       const etag = etagRef.current || '';
@@ -809,10 +806,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         const now = new Date();
         setLastSync(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
       }
-      pushingRef.current = false;
       setSyncing(false);
     }, 500);
-  }, [user, pushRemote, fetchRemote, stateRef, etagRef]);
+  }, [user, pushRemote, fetchRemote]);
 
   return (
     <SyncContext.Provider value={{
