@@ -1,10 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncContext';
 
 export default function MoviePage() {
   const { user, partner } = useAuth();
   const { state, uploadPhoto, deletePhoto } = useSync();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const captionRef = useRef('');
   const [uploading, setUploading] = useState(false);
