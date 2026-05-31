@@ -60,11 +60,17 @@ export default function MoviePage() {
     <div className="page-enter px-5 pt-8 pb-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-title text-3xl text-text-primary">我们的电影</h1>
-          <p className="text-text-secondary text-sm mt-1">
-            {sorted.length} 张回忆
-          </p>
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/home')}
+            className="w-10 h-10 rounded-full bg-white shadow-soft flex items-center justify-center text-lg hover:scale-110 transition-transform">
+            ←
+          </button>
+          <div>
+            <h1 className="font-title text-3xl text-text-primary">我们的电影</h1>
+            <p className="text-text-secondary text-sm mt-1">
+              {sorted.length} 张回忆
+            </p>
+          </div>
         </div>
         <button
           onClick={() => { setShowUpload(true); setCaption(''); setError(''); }}
